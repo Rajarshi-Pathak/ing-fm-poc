@@ -1299,14 +1299,14 @@ export default function App() {
                         {/* 3-SEGMENT ENTERPRISE STRUCTURE */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 mb-4">
                           
-                          {/* SEGMENT 1: CLIENT DATA (STATIC PROFILE & FUNDAMENTALS) */}
+                          {/* BOX 1: INTERNAL CLIENT SIGNALS */}
                           <div className="bg-[#F8FAFC] border border-gray-200/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2.5 border-b border-gray-200">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase">
-                                  Segment 1: Client Data
+                                  1. Internal Client Signals
                                 </span>
-                                <span className="text-[9px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-md border border-blue-200/60">Profile & Debt</span>
+                                <span className="text-[9px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-md border border-blue-200/60">DB & RM Notes</span>
                               </div>
                               <div className="space-y-1.5 text-[11px]">
                                 <div className="flex justify-between">
@@ -1333,14 +1333,14 @@ export default function App() {
                             </div>
                           </div>
 
-                          {/* SEGMENT 2: MARKET DATA (STATIC BENCHMARKS & CURVES) */}
+                          {/* BOX 2: MACRO & MARKET SIGNALS */}
                           <div className="bg-[#F8FAFC] border border-gray-200/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2.5 border-b border-gray-200">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase">
-                                  Segment 2: Market Data
+                                  2. Macro & Market Signals
                                 </span>
-                                <span className="text-[9px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-md border border-purple-200/60">Live Curves</span>
+                                <span className="text-[9px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-md border border-purple-200/60">Live Fixings & Views</span>
                               </div>
                               <div className="space-y-1.5 text-[11px]">
                                 {opp.id === "CLI102" || (opp.type && opp.type.includes("FX")) ? (
@@ -1354,11 +1354,11 @@ export default function App() {
                                       <span className="font-semibold text-gray-900">+185 pts</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-500 font-medium">USD Exposure:</span>
+                                      <span className="text-gray-500 font-medium">USD FX Exposure:</span>
                                       <span className="font-semibold text-amber-700">&gt;$12.0B (Unhedged)</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-gray-500 font-medium">ECB / Fed Funds:</span>
+                                      <span className="text-gray-500 font-medium">ECB / Fed Policy:</span>
                                       <span className="font-semibold text-gray-900">2.25% / 4.25%</span>
                                     </div>
                                   </>
@@ -1378,7 +1378,7 @@ export default function App() {
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-gray-500 font-medium">iTraxx Europe Main:</span>
-                                      <span className="font-semibold text-emerald-700">58 bps (Tight)</span>
+                                      <span className="font-semibold text-emerald-700">58 bps (Tightening)</span>
                                     </div>
                                   </>
                                 ) : (
@@ -1393,7 +1393,7 @@ export default function App() {
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-gray-500 font-medium">iTraxx Europe Main:</span>
-                                      <span className="font-semibold text-emerald-700">58 bps (Tight)</span>
+                                      <span className="font-semibold text-emerald-700">58 bps (Tightening)</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-gray-500 font-medium">ECB Refi / Fed:</span>
@@ -1409,23 +1409,23 @@ export default function App() {
                             </div>
                           </div>
 
-                          {/* SEGMENT 3: LLM SIGNAL & OPPORTUNITY SUMMARY */}
+                          {/* BOX 3: ORIGINATION OPPORTUNITY */}
                           <div className="bg-gradient-to-br from-[#FFF8F3] via-white to-[#FFF3EB] border border-orange-200/90 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-orange-200/60">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#FF6200] uppercase">
-                                  Segment 3: Signal & Summary
+                                  3. Origination Opportunity
                                 </span>
                                 <span className="text-[9px] bg-[#FF6200] text-white font-bold px-2 py-0.5 rounded-md shadow-xs">
-                                  Catalyst Detected
+                                  Catalog Match
                                 </span>
                               </div>
                               <p className="text-[11px] text-gray-800 leading-relaxed font-medium line-clamp-4">
-                                {opp.callout || "Strategic catalyst detected across public debt filings and yield curve movements. Recommended combined benchmark origination sequence."}
+                                {opp.callout || "Strategic catalyst detected across debt filings and swap curves. Recommended combined benchmark origination sequence."}
                               </p>
                             </div>
                             <div className="mt-2 pt-2 border-t border-orange-100 flex items-center justify-between text-[10px]">
-                              <span className="text-gray-500 font-semibold">Lineage: <span className="text-gray-700 font-normal">RSS • Teams • 10-Q</span></span>
+                              <span className="text-gray-500 font-semibold">Lineage: <span className="text-gray-700 font-normal">RSS • Teams • Context Fabric</span></span>
                               <span className="text-[#FF6200] font-bold">10-Slide Pitch Ready</span>
                             </div>
                           </div>
@@ -1620,7 +1620,7 @@ export default function App() {
                   }`}
                 >
                   <UploadCloud size={13} />
-                  <span>Upload PDF / PPTX</span>
+                  <span>House Views (Upload PDF / PPTX)</span>
                 </button>
                 <button
                   onClick={() => { setIngestTab("preset"); setIngestSuccessMsg(null); }}
