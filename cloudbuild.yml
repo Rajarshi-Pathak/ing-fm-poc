@@ -1,0 +1,7 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/my-first-api', '.']
+images:
+  - 'gcr.io/$PROJECT_ID/my-first-api'
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/cloudbuild-sa@$PROJECT_ID.iam.gserviceaccount.com'
+logsBucket: 'gs://teach-telecom-ai-sandbox-build-logs'
