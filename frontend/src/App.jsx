@@ -1231,24 +1231,76 @@ export default function App() {
         </header>
 
         {/* Signal Feed Banner */}
-        <section className="bg-[#EEF2F6] border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-6 py-2.5 flex items-center space-x-8 text-xs overflow-x-auto whitespace-nowrap">
-            <span className="font-extrabold text-gray-500 tracking-wider">
-              LIVE SIGNAL FEED
-            </span>
-            {signals.length > 0 ? (
-              signals.map((sig, idx) => (
-                <div key={idx} className="flex items-center space-x-1.5 text-gray-700 font-medium">
-                  <span className="font-bold text-[#000066]">{sig.type}</span>
-                  <span>{sig.text}</span>
-                  {sig.trend === "up" && <span className="text-emerald-600 font-bold">▲</span>}
-                  {sig.trend === "down" && <span className="text-rose-600 font-bold">▼</span>}
-                  {sig.trend === "neutral" && <span className="text-amber-600">◆</span>}
-                </div>
-              ))
-            ) : (
-              <span className="text-gray-400">No live signals at this time</span>
-            )}
+        <section className="bg-slate-900 border-b border-slate-800 text-white shadow-inner">
+          <div className="max-w-7xl mx-auto px-6 py-2 flex items-center space-x-5 text-xs overflow-x-auto whitespace-nowrap scrollbar-none">
+            
+            {/* Live Indicator */}
+            <div className="flex items-center space-x-2 shrink-0 pr-4 border-r border-slate-700">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="font-extrabold text-slate-300 tracking-wider text-[11px] uppercase">
+                LIVE SIGNAL FEED
+              </span>
+            </div>
+
+            {/* Clickable Signals */}
+            <div className="flex items-center space-x-3">
+              {signals && signals.length > 0 ? (
+                signals.map((sig, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      const el = document.getElementById(`client-${sig.client_id}`) || document.getElementById(sig.client_id);
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                        el.classList.add("ring-2", "ring-orange-500", "transition-all", "duration-500");
+                        setTimeout(() => el.classList.remove("ring-2", "ring-orange-500"), 3000);
+                      }
+                    }}
+                    className="flex items-center space-x-2 bg-slate-800/90 hover:bg-slate-700 border border-slate-750 hover:border-orange-500/60 rounded-lg px-3 py-1 transition-all text-slate-200 cursor-pointer text-left shrink-0 group"
+                    title="Click to focus client opportunity"
+                  >
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      sig.type.includes("ESG") || sig.type.includes("SUSTAINABLE") 
+                        ? "bg-emerald-950 text-emerald-300 border border-emerald-700/50" 
+                        : sig.type.includes("FX") 
+                        ? "bg-indigo-950 text-indigo-300 border border-indigo-700/50" 
+                        : "bg-blue-950 text-blue-300 border border-blue-700/50"
+                    }`}>
+                      {sig.type}
+                    </span>
+                    
+                    <span className="font-semibold text-white group-hover:text-orange-400 transition-colors">
+                      {sig.client_name || sig.client_id}:
+                    </span>
+
+                    <span className="text-slate-300 font-normal max-w-xs md:max-w-md truncate">
+                      {sig.headline || sig.text}
+                    </span>
+
+                    {sig.confidence && (
+                      <span className="text-[10px] font-semibold text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                        {sig.confidence}% conf
+                      </span>
+                    )}
+
+                    {sig.time_ago && (
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        • {sig.time_ago}
+                      </span>
+                    )}
+
+                    {sig.trend === "up" && <span className="text-emerald-400 font-bold">▲</span>}
+                    {sig.trend === "down" && <span className="text-rose-400 font-bold">▼</span>}
+                  </button>
+                ))
+              ) : (
+                <span className="text-slate-400 text-xs italic">Awaiting market signals...</span>
+              )}
+            </div>
+
           </div>
         </section>
 

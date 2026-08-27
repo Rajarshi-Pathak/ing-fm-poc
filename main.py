@@ -283,18 +283,54 @@ def get_live_signals():
         try:
             cur = conn.cursor()
             cur.execute("""
-                SELECT signal_type, COALESCE(metric_identified, trigger_summary, description, 'Market Trigger'), urgency
-                FROM ca.digital_twin_signals 
-                ORDER BY created_at DESC LIMIT 8;
+                SELECT 
+                    s.signal_id,
+                    s.client_id,
+                    COALESCE(c.client_name, s.client_id) as client_name,
+                    s.signal_type,
+                    COALESCE(s.metric_identified, s.trigger_summary, s.description, 'Market Catalyst') as headline,
+                    s.confidence_pct,
+                    s.urgency,
+                    s.created_at
+                FROM ca.digital_twin_signals s
+                LEFT JOIN ca.client_master c ON (s.client_id = c.client_id OR c.client_id LIKE s.client_id || '%%' OR s.client_id LIKE c.client_id || '%%')
+                ORDER BY s.created_at DESC 
+                LIMIT 15;
             """)
             rows = cur.fetchall()
+            now_dt = datetime.now()
+            
             for r in rows:
-                urgency = str(r[2] or "Medium").upper()
-                trend = "up" if urgency in ["HIGH", "CRITICAL"] else ("down" if urgency in ["LOW"] else "neutral")
+                sig_id, cid, cname, stype, headline, conf, urgency, created_at = r
+                urg_str = str(urgency or "Medium").upper()
+                trend = "up" if urg_str in ["HIGH", "CRITICAL"] else ("down" if urg_str in ["LOW"] else "neutral")
+                
+                time_ago = "Just now"
+                if created_at:
+                    try:
+                        delta = now_dt - created_at
+                        mins = int(delta.total_seconds() / 60)
+                        if mins < 1:
+                            time_ago = "Just now"
+                        elif mins < 60:
+                            time_ago = f"{mins}m ago"
+                        else:
+                            hours = int(mins / 60)
+                            time_ago = f"{hours}h ago"
+                    except Exception:
+                        time_ago = "Recent"
+
                 signals.append({
-                    "type": str(r[0] or "SIGNAL").upper(),
-                    "text": str(r[1]),
-                    "trend": trend
+                    "id": str(sig_id),
+                    "client_id": str(cid),
+                    "client_name": str(cname),
+                    "type": str(stype or "CATALYST").upper(),
+                    "text": f"{cname}: {headline}",
+                    "headline": str(headline),
+                    "confidence": int(conf or 90),
+                    "urgency": urg_str,
+                    "trend": trend,
+                    "time_ago": time_ago
                 })
             cur.close()
             conn.close()
@@ -305,10 +341,9 @@ def get_live_signals():
 
     if not signals:
         signals = [
-            {"type": "RATES", "text": "5Y EUR Swap 2.62% (-18bp this month)", "trend": "up"},
-            {"type": "CREDIT", "text": "iBoxx EUR Corp BBB at 115 bps", "trend": "neutral"},
-            {"type": "BENCHMARK", "text": "10Y Bund 2.61% curve anchor", "trend": "neutral"},
-            {"type": "DERIVATIVES", "text": "iTraxx Main 58 bps tight", "trend": "up"}
+            {"id": "SIG-DF1", "client_id": "CLI103", "client_name": "BASF SE", "type": "REFINANCING", "text": "BASF SE: €2.0B 6Y EMTN & €1.2B Pre-Hedge", "headline": "€2.0B 6Y EMTN & €1.2B Pre-Hedge", "confidence": 94, "urgency": "HIGH", "trend": "up", "time_ago": "Just now"},
+            {"id": "SIG-DF2", "client_id": "CLI101", "client_name": "Enel S.p.A.", "type": "SUSTAINABLE", "text": "Enel S.p.A.: EUR 750M Green EMTN Pre-Hedge", "headline": "EUR 750M Green EMTN Pre-Hedge", "confidence": 94, "urgency": "HIGH", "trend": "up", "time_ago": "12m ago"},
+            {"id": "SIG-DF3", "client_id": "CLI102", "client_name": "ASML Holding", "type": "HEDGING", "text": "ASML Holding: EUR 900M FX Collar Hedge", "headline": "EUR 900M FX Collar Hedge", "confidence": 92, "urgency": "HIGH", "trend": "up", "time_ago": "25m ago"}
         ]
     return signals
 
