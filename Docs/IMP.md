@@ -1,0 +1,1 @@
+"The Priority Today panel cuts RM prep time from days to minutes. It identifies which corporate clients are exposed to immediate rate or refinancing risk today, sizes the bank's revenue opportunity, and prepares the pitchbook before the coverage call even begins."

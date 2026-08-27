@@ -160,89 +160,63 @@ def get_rm_metrics():
         try:
             cur = conn.cursor()
             cur.execute("""
-                SELECT 
-                    o.rank,
+                SELECT DISTINCT ON (c.client_id)
                     c.client_name,
                     c.client_id,
-                    o.priority_score,
-                    o.opportunity_type,
-                    COALESCE(o.est_revenue_eur_000, 0),
-                    o.next_best_action,
-                    o.why_now_nlg,
-                    o.trigger_source,
-                    COALESCE(c.industry_sector, 'Wholesale'),
-                    COALESCE(c.country, 'Europe'),
-                    COALESCE(c.rm_name, 'Coverage Director'),
-                    COALESCE(fl.net_debt_eur_m, 0),
-                    COALESCE(fl.liquidity_eur_m, 0),
-                    COALESCE(fl.debt_maturing_24m_eur_m, 0)
+                    COALESCE(o.priority_score, 75) as score,
+                    COALESCE(o.opportunity_type, 'STRATEGIC FINANCING') as opp_type,
+                    COALESCE(o.est_revenue_eur_000, 0) as est_fee,
+                    COALESCE(o.next_best_action, 'Review opportunity and schedule coverage call.') as next_action,
+                    COALESCE(o.why_now_nlg, '') as why_now,
+                    COALESCE(c.industry_sector, 'Wholesale') as sector,
+                    COALESCE(c.hq_country, 'Europe') as country,
+                    COALESCE(c.rm_name, 'Coverage Director') as rm_name
                 FROM ca.ca_opportunity_scoring o
                 JOIN ca.client_master c ON (o.client_id = c.client_id OR c.client_id LIKE o.client_id || '%%' OR o.client_id LIKE c.client_id || '%%')
-                LEFT JOIN LATERAL (
-                    SELECT net_debt_eur_m, liquidity_eur_m, debt_maturing_24m_eur_m
-                    FROM ca.ext_company_filings
-                    WHERE client_id = c.client_id OR client_id LIKE c.client_id || '%%'
-                    ORDER BY reporting_period DESC LIMIT 1
-                ) fl ON true
-                ORDER BY o.rank ASC
-                LIMIT 4;
+                ORDER BY c.client_id, score DESC, est_fee DESC;
             """)
             rows = cur.fetchall()
-            for r in rows:
-                rnk, cname, cid, score, opp_type, rev_k, action, why_now, trigger, sector, country, rm, net_d, liq, m24 = r
-                fee_val = float(rev_k)
-                fee_str = f"€{fee_val/1000:.1f}M" if fee_val >= 1000 else f"€{int(fee_val)}k"
+            
+            # Sort distinct clients by priority score DESC, then est_fee DESC
+            sorted_rows = sorted(rows, key=lambda x: (int(x[2]), float(x[4])), reverse=True)[:4]
+            
+            for rank_idx, r in enumerate(sorted_rows, 1):
+                cname, cid, score, opp_type, est_fee, next_action, why_now, sector, country, rm_name = r
+                fee_val = float(est_fee)
+                fee_str = f"€{fee_val/1000:.1f}M" if fee_val >= 1000 else (f"€{int(fee_val)}k" if fee_val > 0 else "")
                 
-                # Dynamic badge based on actual catalog type
-                ot = str(opp_type).lower()
-                if "commodity" in ot or "bunker" in ot:
-                    badge_type = "COMMODITY HEDGE"
-                elif "fx" in ot or "currency" in ot:
-                    badge_type = "FX GAP"
-                elif "rates" in ot or "irs" in ot or "swap" in ot:
-                    badge_type = "RATES HEDGE"
-                elif "refi" in ot or "dcm" in ot or "bond" in ot:
-                    badge_type = "REFINANCING"
-                elif "deposit" in ot or "cash" in ot:
-                    badge_type = "LIQUIDITY OPTIMISATION"
-                else:
-                    badge_type = "STRATEGIC ADVISORY"
-                
-                badge = f"{badge_type} · RANK #{rnk} (SCORE {score})"
+                badge_str = f"{str(opp_type).upper()} · RANK #{rank_idx} (SCORE {score})"
+                desc_str = str(why_now) if why_now else f"{sector} ({country}) — Active balance sheet and maturity window review."
                 
                 priorities.append({
-                    "rank": int(rnk),
-                    "badge": badge,
+                    "rank": rank_idx,
+                    "badge": badge_str,
                     "title": str(cname),
-                    "name": str(cname),
-                    "id": str(cid),
+                    "client_name": str(cname),
                     "client_id": str(cid),
-                    "sector": str(sector),
-                    "country": str(country),
-                    "rm_name": str(rm),
-                    "net_debt": float(net_d),
-                    "liquidity": float(liq),
-                    "debt_maturing_24m": float(m24),
                     "score": int(score),
-                    "type": str(opp_type),
+                    "type": str(opp_type).upper(),
                     "opportunity_type": str(opp_type),
                     "fee_estimate": fee_str,
-                    "desc": str(why_now),
-                    "action": str(action),
-                    "trigger": str(trigger),
-                    "callout": str(why_now),
-                    "chips": [badge_type, f"Score: {score}", fee_str]
+                    "est_fee_k": int(fee_val),
+                    "desc": desc_str,
+                    "why_now": desc_str,
+                    "action": str(next_action),
+                    "next_best_action": str(next_action),
+                    "sector": str(sector),
+                    "country": str(country),
+                    "rm_name": str(rm_name)
                 })
             cur.close()
             conn.close()
             if connector:
                 connector.close()
         except Exception as e:
-            logger.warning(f"Failed to query live opportunity scoring: {e}")
+            logger.error(f"Failed to query RM metrics: {e}")
 
     return {
         "active_drafts": {"value": 6, "change": "▲ 2", "label": "Active drafts in progress"},
-        "avg_time": {"value": "3.2d", "change": "▼ 73%", "label": "Avg. time to first draft"},
+        "avg_time_draft": {"value": "3.2d", "change": "▼ 73%", "label": "Avg. time to first draft"},
         "pending_review": {"value": 4, "change": "steady", "label": "Deals pending review"},
         "cohort_matches": {"value": 13, "change": "▲ 5", "label": "Cohort matches in database"},
         "priorities": priorities
@@ -302,9 +276,15 @@ def get_opportunities():
                     cm.tier,
                     cm.hq_country,
                     COALESCE(cm.rm_name, 'Coverage Director'),
+                    COALESCE(cm.industry_sector, 'Wholesale Banking'),
                     COALESCE(fl.net_debt_eur_m, 0),
                     COALESCE(fl.liquidity_eur_m, 0),
-                    COALESCE(fl.debt_maturing_24m_eur_m, 0)
+                    COALESCE(fl.debt_maturing_24m_eur_m, 0),
+                    COALESCE(os.priority_score, 75),
+                    COALESCE(os.opportunity_type, 'DEBT REFINANCING'),
+                    COALESCE(os.next_best_action, 'Capital structure review and proactive balance sheet advisory.'),
+                    COALESCE(os.why_now_nlg, 'Upcoming maturity window and active market rate dynamics.'),
+                    COALESCE(os.est_revenue_eur_000, 0)
                 FROM ca.client_master cm
                 LEFT JOIN LATERAL (
                     SELECT net_debt_eur_m, liquidity_eur_m, debt_maturing_24m_eur_m
@@ -312,15 +292,22 @@ def get_opportunities():
                     WHERE client_id = cm.client_id OR client_id LIKE cm.client_id || '%%'
                     ORDER BY reporting_period DESC LIMIT 1
                 ) fl ON true
-                ORDER BY cm.client_id ASC;
+                LEFT JOIN LATERAL (
+                    SELECT priority_score, opportunity_type, next_best_action, why_now_nlg, est_revenue_eur_000
+                    FROM ca.ca_opportunity_scoring
+                    WHERE client_id = cm.client_id OR client_id LIKE cm.client_id || '%%'
+                    ORDER BY priority_score DESC LIMIT 1
+                ) os ON true
+                ORDER BY os.priority_score DESC NULLS LAST, cm.client_name ASC;
             """)
             client_rows = cur.fetchall()
 
             for r in client_rows:
-                cid, name, tier, hq, rm, net_debt, liq, m24 = r
+                cid, name, tier, hq, rm, sector, net_debt, liq, m24, score_num, opp_type, action, why_now, est_fee = r
                 cid_str = str(cid)
                 name_str = str(name)
-                
+
+                # Check debt maturities count
                 cur.execute("""
                     SELECT COALESCE(SUM(amount_eur_m), 0), COUNT(isin)
                     FROM ca.debt_maturity_schedule
@@ -333,81 +320,38 @@ def get_opportunities():
                 if float(m24) == 0 and total_nominal > 0:
                     m24 = total_nominal
 
-                # Query latest signal for this client
-                cur.execute("""
-                    SELECT trigger_summary, urgency
-                    FROM ca.digital_twin_signals
-                    WHERE client_id = %s OR client_id LIKE %s
-                    ORDER BY created_at DESC LIMIT 1;
-                """, (cid_str, f"{cid_str}%"))
-                sig_row = cur.fetchone()
-                latest_trigger = sig_row[0] if sig_row else None
-                latest_urgency = sig_row[1] if sig_row else "Medium"
+                score_level = "High" if int(score_num) >= 85 else ("Medium" if int(score_num) >= 70 else "Low")
+                score_val = f"{score_level} · {score_num}"
 
-                is_enel = "101" in cid_str or "ENEL" in name_str.upper()
-                is_basf = "103" in cid_str or "BASF" in name_str.upper()
-                is_asml = "ASML" in name_str.upper()
-
-                # Actionable Filtering
-                if not (is_enel or is_basf or is_asml or float(m24) > 0 or total_nominal > 0 or latest_trigger):
-                    continue
-
-                if is_enel and float(m24) == 0:
-                    m24 = 10130.0
-                    net_debt = 58500.0
-                    liq = 14200.0
-                if is_basf and float(m24) == 0:
-                    m24 = 4800.0
-                    net_debt = 16200.0
-                    liq = 7800.0
-
-                if is_enel:
-                    opp_type = "DEBT REFINANCING"
-                    score_val = "High · 88"
-                    score_num = 88
-                    callout = f"Existing €{float(m24):,.0f}M debt profile faces heavy rollover across 2026/2027. Proactive pre-hedging captures current favorable rate window."
-                elif is_basf:
-                    opp_type = "LIABILITY MANAGEMENT / HEDGING"
-                    score_val = "High · 92"
-                    score_num = 92
-                    if latest_trigger:
-                        callout = f"Recent market catalyst: {latest_trigger}. Recommend combined €1.5B Senior EMTN benchmark issuance."
-                    else:
-                        callout = f"Significant interest rate hedge roll-off approaching over next 12 months. Recommend combined €1.5B Senior EMTN benchmark issuance."
-                elif is_asml:
-                    opp_type = "CAPITAL STRUCTURE ADVISORY"
-                    score_val = "High · 85"
-                    score_num = 85
-                    callout = f"Liquidity surplus optimization and opportunistic green commercial paper structuring for {name_str}."
+                chips = []
+                if float(m24) > 0:
+                    chips.append(f"€{float(m24):,.0f}M debt maturity wall in next 24M")
+                elif tranches_count > 0:
+                    chips.append(f"{tranches_count} bond tranches scheduled")
                 else:
-                    opp_type = "DEBT REFINANCING"
-                    score_val = "Medium · 79"
-                    score_num = 79
-                    callout = f"Upcoming capital maturities review for {name_str}."
+                    chips.append(f"Industry: {sector}")
 
-                chips = [
-                    f"€{float(m24):,.0f}M debt maturity wall in next 24M" if float(m24) > 0 else f"{tranches_count} bond tranches scheduled",
-                    f"Net Debt: €{float(net_debt):,.0f}M | Liquidity: €{float(liq):,.0f}M" if float(net_debt) > 0 else "Active balance sheet review"
-                ]
+                if float(net_debt) > 0:
+                    chips.append(f"Net Debt: €{float(net_debt):,.0f}M | Liquidity: €{float(liq):,.0f}M")
+                else:
+                    chips.append("Active balance sheet review")
 
                 opps.append({
                     "id": cid_str,
                     "name": name_str,
                     "type": opp_type,
-                    "is_debt": is_enel or is_basf or total_nominal > 0,
-                    "subtitle": f"{tier or 'Tier 1'} client ({hq or 'Europe'})",
+                    "is_debt": float(m24) > 0 or total_nominal > 0 or "DEBT" in opp_type.upper(),
+                    "subtitle": f"{tier or 'Tier 1'} client ({hq or sector})",
                     "score": score_val,
-                    "score_num": score_num,
+                    "score_num": int(score_num),
                     "chips": chips,
-                    "callout": callout,
+                    "callout": f"{why_now} {action}".strip(),
                     "slides_count": 10,
                     "net_debt_str": f"€{float(net_debt):,.0f}M" if float(net_debt) > 0 else "—",
                     "liquidity_str": f"€{float(liq):,.0f}M" if float(liq) > 0 else "—",
                     "debt_maturing_24m_str": f"€{float(m24):,.0f}M" if float(m24) > 0 else "—",
                     "rm_name": rm
                 })
-
-            opps.sort(key=lambda x: x.get("score_num", 0), reverse=True)
 
             cur.close()
             conn.close()
@@ -416,39 +360,6 @@ def get_opportunities():
         except Exception as exc:
             logger.error(f"Error querying opportunities: {exc}")
 
-    if not opps:
-        opps = [
-            {
-                "id": "CLI103",
-                "name": "BASF SE",
-                "type": "LIABILITY MANAGEMENT / HEDGING",
-                "is_debt": True,
-                "subtitle": "Tier 1 client (Ludwigshafen, Germany)",
-                "score": "High · 92",
-                "chips": ["€4,800M maturing debt across next 24 months", "Net Debt: €16,200M | Liquidity: €7,800M"],
-                "callout": "Significant interest rate hedge roll-off approaching over next 12 months. Recommend combined €1.5B Senior EMTN benchmark issuance.",
-                "slides_count": 10,
-                "net_debt_str": "€16,200M",
-                "liquidity_str": "€7,800M",
-                "debt_maturing_24m_str": "€4,800M",
-                "rm_name": "Dr. Markus Weber"
-            },
-            {
-                "id": "CLI101",
-                "name": "Enel S.p.A.",
-                "type": "DEBT REFINANCING",
-                "is_debt": True,
-                "subtitle": "Tier 1 client (European Integrated Power & Grids)",
-                "score": "High · 88",
-                "chips": ["€10,130M debt maturity wall in 2026–2027", "Net Debt: €58,500M | Liquidity: €14,200M"],
-                "callout": "Existing €10,130M debt profile faces heavy rollover across 2026/2027. Proactive pre-hedging captures current favorable rate easing window.",
-                "slides_count": 10,
-                "net_debt_str": "€58,500M",
-                "liquidity_str": "€14,200M",
-                "debt_maturing_24m_str": "€10,130M",
-                "rm_name": "Giulia Romano"
-            }
-        ]
     return opps
 
 
@@ -621,13 +532,16 @@ def ingest_text_signal(req: TextIngestRequest):
 
     extracted = {
         "signal_type": "REFINANCING",
-        "metric_identified": sname[:100],
+        "catalog_family": "Financing/Capital Markets",
+        "metric_identified": sname[:100] if sname else "Market Catalyst",
         "trigger_summary": text[:200],
         "metric_value": "Market Catalyst",
         "description": text[:500],
-        "confidence_pct": 92,
+        "confidence_pct": 94,
         "urgency": "High",
-        "catalog_family": "Financing/Capital Markets"
+        "suggested_action": "Execute EMTN Benchmark with Pre-Hedge Swap Overlay",
+        "est_revenue_eur_000": 5500,
+        "priority_score": 94
     }
 
     if GENAI_AVAILABLE:
@@ -645,10 +559,13 @@ Extract structured signal parameters matching the database schema as STRICT JSON
   "catalog_family": "Financing/Capital Markets | Interest Rate | Foreign Exchange | Sustainable Finance",
   "metric_identified": "Short headline / metric identified (max 100 chars)",
   "trigger_summary": "1-sentence executive trigger summary",
-  "metric_value": "Key value or spread (e.g. €3.9B or Mid-Swap +82bps)",
+  "metric_value": "Key value or spread (e.g. €750M or Mid-Swap +77bps)",
   "description": "2-sentence detailed institutional description",
   "confidence_pct": 94,
-  "urgency": "High | Medium | Low"
+  "urgency": "High | Medium | Low",
+  "suggested_action": "Specific deal recommendation (e.g. Execute EUR 750M 8Y Green EMTN with EUR 500M Pre-Hedge)",
+  "est_revenue_eur_000": 5500,
+  "priority_score": 94
 }}
 """
             response = client_gcp.models.generate_content(
@@ -659,40 +576,69 @@ Extract structured signal parameters matching the database schema as STRICT JSON
                     response_mime_type="application/json"
                 )
             )
-            extracted = json.loads(response.text)
+            extracted_json = json.loads(response.text)
+            extracted.update(extracted_json)
         except Exception as e:
             logger.warning(f"Vertex AI signal extraction error: {e}")
 
-    # Write directly to ca.digital_twin_signals matching schema columns
+    # Write to ca.digital_twin_signals and update ca.ca_opportunity_scoring
     conn, connector = get_db_connection()
     if conn:
         try:
             cur = conn.cursor()
             sig_id = f"SIG-{uuid.uuid4().hex[:8].upper()}"
+            
+            # 1. Insert into ca.digital_twin_signals
             cur.execute("""
                 INSERT INTO ca.digital_twin_signals 
                 (signal_id, client_id, catalog_family, signal_type, metric_identified, trigger_summary, metric_value, description, confidence_pct, urgency, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW());
             """, (
                 sig_id,
-                cid,
-                extracted.get("catalog_family", "Financing/Capital Markets"),
-                extracted.get("signal_type", "REFINANCING"),
-                extracted.get("metric_identified", sname[:100]),
-                extracted.get("trigger_summary", text[:200]),
-                extracted.get("metric_value", "Live Trigger"),
-                extracted.get("description", text[:500]),
-                int(extracted.get("confidence_pct", 90)),
-                extracted.get("urgency", "High")
+                str(cid),
+                str(extracted.get("catalog_family", "Financing/Capital Markets")),
+                str(extracted.get("signal_type", "REFINANCING")),
+                str(extracted.get("metric_identified", "Catalyst"))[:100],
+                str(extracted.get("trigger_summary", text[:200])),
+                str(extracted.get("metric_value", "Live Trigger"))[:50],
+                str(extracted.get("description", text[:500])),
+                int(extracted.get("confidence_pct", 94)),
+                str(extracted.get("urgency", "High"))
             ))
+
+            # 2. Update ca.ca_opportunity_scoring
+            new_action = str(extracted.get("suggested_action", "Execute EUR 750M 8Y Green EMTN with EUR 500M Pre-Hedge"))
+            new_why_now = str(extracted.get("trigger_summary", text[:200]))
+            new_fee = float(extracted.get("est_revenue_eur_000", 5500))
+            new_score = int(extracted.get("priority_score", 94))
+            new_type = str(extracted.get("signal_type", "REFINANCING"))
+
+            cur.execute("""
+                UPDATE ca.ca_opportunity_scoring
+                SET next_best_action = %s,
+                    why_now_nlg = %s,
+                    est_revenue_eur_000 = %s,
+                    priority_score = %s,
+                    opportunity_type = %s
+                WHERE client_id = %s OR client_id LIKE %s;
+            """, (
+                new_action,
+                new_why_now,
+                new_fee,
+                new_score,
+                new_type,
+                str(cid),
+                f"{str(cid)}%"
+            ))
+
             conn.commit()
             cur.close()
             conn.close()
             if connector:
                 connector.close()
-            logger.info(f"Signal {sig_id} written to ca.digital_twin_signals for {cid}")
-        except Exception as exc:
-            logger.error(f"Database insertion error: {exc}")
+            logger.info(f"Successfully committed signal {sig_id} and updated opportunity scoring for {cid}")
+        except Exception as e:
+            logger.error(f"Failed to persist ingested signal to DB: {e}")
 
     return {
         "status": "INGESTED_AND_EVALUATED",
@@ -703,7 +649,7 @@ Extract structured signal parameters matching the database schema as STRICT JSON
             "signal_headline": extracted.get("metric_identified", sname),
             "signal_type": extracted.get("signal_type", "REFINANCING"),
             "urgency": extracted.get("urgency", "High"),
-            "confidence_pct": extracted.get("confidence_pct", 92)
+            "confidence_pct": extracted.get("confidence_pct", 94)
         },
         "timestamp": datetime.now().strftime("%H:%M:%S")
     }

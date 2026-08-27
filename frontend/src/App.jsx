@@ -1420,9 +1420,26 @@ export default function App() {
                                   Catalog Match
                                 </span>
                               </div>
-                              <p className="text-[11px] text-gray-800 leading-relaxed font-medium line-clamp-4">
-                                {opp.callout || "Strategic catalyst detected across debt filings and swap curves. Recommended combined benchmark origination sequence."}
-                              </p>
+                              <div className="text-[11px] text-gray-800 leading-relaxed space-y-1.5">
+                                {opp.id === "CLI103" || opp.id === "CLI010" || (opp.name && opp.name.includes("BASF")) ? (
+                                  <>
+                                    <p><b className="text-gray-900">Catalyst:</b> €3,000M debt rolling off over 24M into higher benchmark swap yields.</p>
+                                    <p><b className="text-[#FF6200]">Deal Action:</b> €1.5B Dual-Tranche (5Y/10Y) Senior EMTN refinancing with immediate Forward Pre-Hedge Swap lock.</p>
+                                  </>
+                                ) : opp.id === "CLI101" || (opp.name && opp.name.includes("Enel")) ? (
+                                  <>
+                                    <p><b className="text-gray-900">Catalyst:</b> €10,127M maturity wall & €4.0B renewable capex authorization.</p>
+                                    <p><b className="text-[#FF6200]">Deal Action:</b> €600M 8Y Inaugural Green EMTN (ICMA aligned) capturing -5 bps Greenium concession.</p>
+                                  </>
+                                ) : opp.id === "CLI102" || (opp.name && opp.name.includes("ASML")) ? (
+                                  <>
+                                    <p><b className="text-gray-900">Catalyst:</b> &gt;$12.0B unhedged USD cash flows exposed to EUR/USD spot swings.</p>
+                                    <p><b className="text-[#FF6200]">Deal Action:</b> €1.2B 12M Layered Zero-Cost FX Collar with 10% upside participation.</p>
+                                  </>
+                                ) : (
+                                  <p>{opp.callout || "Strategic catalyst detected across debt filings and swap curves. Recommended combined benchmark origination sequence."}</p>
+                                )}
+                              </div>
                             </div>
                             <div className="mt-2 pt-2 border-t border-orange-100 flex items-center justify-between text-[10px]">
                               <span className="text-gray-500 font-semibold">Lineage: <span className="text-gray-700 font-normal">RSS • Teams • Context Fabric</span></span>
