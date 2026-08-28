@@ -104,8 +104,10 @@ if [ -z "$INSTANCE_CONN_RESULT" ]; then
     echo "WARNING: Could not retrieve Cloud SQL connection name for '$SQL_INSTANCE'."
     echo "Verify database instance name and project permissions."
     export INSTANCE_CONN=""
+    export INSTANCE_CONNECTION_NAME=""
 else
     export INSTANCE_CONN="$INSTANCE_CONN_RESULT"
+    export INSTANCE_CONNECTION_NAME="$INSTANCE_CONN_RESULT"
 fi
 
 SERVICE_URL_RESULT="$(
