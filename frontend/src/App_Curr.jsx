@@ -1825,7 +1825,7 @@ export default function App() {
                   }`}
                 >
                   <UploadCloud size={13} />
-                  <span>Houseviews (Upload PDF / PPTX)</span>
+                  <span>Upload Houseviews (PDF / PPTX)</span>
                 </button>
                 <button
                   onClick={() => { setIngestTab("touchpoint"); setIngestSuccessMsg(null); }}
@@ -1982,401 +1982,353 @@ export default function App() {
                   </div>
                 )}
 
-                {/* WorkFabric Context Memo Tab (All 4 Product Families) */}
-                  {ingestTab === "context_fabric" && (
-                    <div className="space-y-4">
-                      <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-base">🧠</span>
-                            <span className="font-extrabold text-[#000066] text-xs uppercase tracking-wider">WorkFabric Context Engine</span>
-                          </div>
-                          <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded border border-blue-200">Systems of Work</span>
+                {/* WorkFabric Context Memo Tab (Dedicated 4th Channel) */}
+                {ingestTab === "context_fabric" && (
+                  <div className="space-y-4">
+                    {/* Header Banner */}
+                    <div className="bg-[#000066]/5 border border-[#000066]/20 rounded-xl p-3.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-base">🧠</span>
+                          <span className="font-extrabold text-[#000066] text-xs uppercase tracking-wider">
+                            WorkFabric Context Engine — Systems of Work
+                          </span>
                         </div>
-                        <p className="text-[11px] text-blue-950 mt-1 leading-snug font-medium">
-                          Captures tacit knowledge, origination working notes, and latent opportunities across all 4 product families.
-                        </p>
+                        <span className="text-[10px] bg-[#000066] text-white font-bold px-2 py-0.5 rounded shadow-2xs">
+                          Tacit Desk Intelligence
+                        </span>
                       </div>
-
-                      {/* 4 Product Family Presets (2x2 Grid) */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        {/* 1. DCM Origination Note */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC DCM MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Debt Capital Markets (DCM)
-` +
-                            `Author: Luca Moretti (DCM Origination)
-` +
-                            `Reconciliation: Public materials show recent capital markets access, but capex should not be equated with funding gap. ` +
-                            `Residual 2026-2027 debt maturities remain at sizable volume. Candidate issue: residual funding sequencing and liability management with senior benchmark tranche.`
-                          )}
-                          className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#000066] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>📝</span> DCM Origination Note Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Reconcile CapEx vs. bond issuance to uncover latent funding gap</p>
-                        </button>
-
-                        {/* 2. Latent Pre-Hedge Overlay */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC PRE-HEDGE OVERLAY MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Rate Risk Immunisation & Derivatives
-` +
-                            `Author: Roman Weiss (Rates Structuring)
-` +
-                            `Signal: Executive Committee authorized accelerated debt rollover. Mandate requires EUR 2.0B Senior EMTN benchmark with immediate ` +
-                            `EUR 1.2B 6Y Fixed-to-Floating IRS pre-hedge to capture favorable swap rates ahead of ECB policy cycle.`
-                          )}
-                          className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#000066] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>🎯</span> Latent Pre-Hedge Overlay Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Lock spread savings and interest rate swap overlay ahead of rate cycle</p>
-                        </button>
-
-                        {/* 3. Sustainable Finance Framework */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC SUSTAINABLE FINANCE MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Green & Sustainability-Linked Structuring
-` +
-                            `Author: Marta Nowak (ESG Structuring Lead)
-` +
-                            `Framework: Verified ICMA Green Bond Principles & EU Taxonomy alignment. Ring-fenced €1.5B eligible clean energy asset pool. ` +
-                            `Recommended structure: Inaugural €750M 8Y Green EMTN with 3-7 bps new issue greenium advantage.`
-                          )}
-                          className="p-2.5 rounded-lg border border-emerald-200 bg-white hover:border-emerald-600 hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-emerald-800 text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>🌿</span> Sustainable Finance Mandate Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Structure Green/SLB framework with SPO verification & greenium pricing</p>
-                        </button>
-
-                        {/* 4. Strategic FX Architecture */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC FX RISK ARCHITECTURE MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Strategic FX Architecture & Hedging
-` +
-                            `Author: Sector FX Specialist Desk
-` +
-                            `Exposure: Addressing unhedged USD commercial revenue expansion. Recommend multi-tenor layered corridors with ` +
-                            `rolling 12M–24M zero-cost participating collars protecting group gross operating margin.`
-                          )}
-                          className="p-2.5 rounded-lg border border-amber-200 bg-white hover:border-[#FF6200] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#FF6200] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>💱</span> Strategic FX Corridor Note Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Layered participating FX collars protecting group EBITDA margin</p>
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 font-bold mb-1.5 text-xs">WorkFabric Context Memo Content:</label>
-                        <textarea
-                          value={customTextContent}
-                          onChange={(e) => setCustomTextContent(e.target.value)}
-                          placeholder="Enter structured WorkFabric memo, tacit desk note, or latent opportunity synthesis..."
-                          rows={4}
-                          className="w-full p-3 border border-blue-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-[#000066] focus:border-transparent bg-[#FAFCFF]"
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => handleIngestCustomText("CONTEXT_FABRIC", `WorkFabric Context Engine (${ingestClient.name})`)}
-                        disabled={!customTextContent.trim() || ingestingAction}
-                        className="w-full bg-[#000066] hover:bg-[#1A224D] text-white font-bold py-2.5 rounded-lg shadow-sm transition disabled:opacity-40 flex items-center justify-center space-x-1.5"
-                      >
-                        {ingestingAction ? (
-                          <span>Ingesting to Context Fabric & Updating Twin...</span>
-                        ) : (
-                          <>
-                            <span>🧠 Ingest to WorkFabric & Recalibrate Digital Twin</span>
-                          </>
-                        )}
-                      </button>
+                      <p className="text-[11px] text-gray-700 mt-1 leading-relaxed font-medium">
+                        Captures unannounced corporate catalysts, pre-deal memos, and multi-product structuring opportunities across wholesale banking desks.
+                      </p>
                     </div>
-                  )}
-                </div>
+
+                    {/* 4 Multi-Product Family Selectors */}
+                    <div>
+                      <label className="block text-gray-700 font-bold mb-1.5 text-[11px] uppercase tracking-wider">
+                        Select Product Family Preset:
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {/* 1. DCM Refinancing */}
+                        <button
+                          type="button"
+                          onClick={() => setCustomTextContent(
+                            "WORKFABRIC CONTEXT MEMO [DCM & REFINANCING]:\n" +
+                            "Client: " + ingestClient.name + "\n" +
+                            "Author: Luca Moretti (DCM Origination Desk)\n" +
+                            "Desk Signal: Executive Committee approved debt rollover plan. Public materials show recent capital markets access, but capex should not be equated with funding gap. Residual 2026-2027 debt maturities remain sizable.\n" +
+                            "Latent Opportunity: Structure a €1.5B 7Y Senior EMTN benchmark issuance to term out short-term bank facilities and capture favorable credit spread tightening."
+                          )}
+                          className="p-2.5 rounded-lg border border-gray-200 bg-[#F8F9FA] hover:border-[#FF6200] hover:bg-orange-50/30 text-left transition group shadow-2xs"
+                        >
+                          <div className="font-bold text-[#000066] text-xs group-hover:text-[#FF6200] flex items-center gap-1 mb-0.5">
+                            <span>🏛️</span> DCM
+                          </div>
+                          <p className="text-[9.5px] text-gray-500 line-clamp-2">CapEx & debt rollover sequencing</p>
+                        </button>
+
+                        {/* 2. Rates & Pre-Hedging */}
+                        <button
+                          type="button"
+                          onClick={() => setCustomTextContent(
+                            "WORKFABRIC CONTEXT MEMO [INTEREST RATE HEDGING]:\n" +
+                            "Client: " + ingestClient.name + "\n" +
+                            "Author: Roman Weiss (Rates Structuring Specialist)\n" +
+                            "Desk Signal: Treasury risk committee authorized fixed-rate pre-hedging ahead of upcoming central bank rate decisions. Floating-rate liability ratio currently exceeds policy ceiling by 18%.\n" +
+                            "Latent Opportunity: Execute €800M 5Y to 7Y Fixed-to-Floating Pre-Hedge Interest Rate Swap (IRS) overlay at 2.58% to lock in swap curve discount."
+                          )}
+                          className="p-2.5 rounded-lg border border-gray-200 bg-[#F8F9FA] hover:border-[#000066] hover:bg-blue-50/40 text-left transition group shadow-2xs"
+                        >
+                          <div className="font-bold text-[#000066] text-xs group-hover:text-blue-800 flex items-center gap-1 mb-0.5">
+                            <span>📈</span> Rates Pre-Hedge
+                          </div>
+                          <p className="text-[9.5px] text-gray-500 line-clamp-2">ISDA swap pre-hedge ahead of ECB rate cycle</p>
+                        </button>
+
+                        {/* 3. Green / ESG Financing */}
+                        <button
+                          type="button"
+                          onClick={() => setCustomTextContent(
+                            "WORKFABRIC CONTEXT MEMO [GREEN & SUSTAINABLE FINANCE]:\n" +
+                            "Client: " + ingestClient.name + "\n" +
+                            "Author: Elena Rossi (Sustainable Finance Advisory)\n" +
+                            "Desk Signal: Treasury confirmed €1.2B green transition CapEx pipeline (EU Taxonomy aligned) ready for debt allocation. Strong institutional ESG investor demand detected in Nordic and Benelux books.\n" +
+                            "Latent Opportunity: Structure a €600M 8Y Green Senior EMTN tranche with 12 bps 'greenium' pricing benefit and ESG KPI framework verification."
+                          )}
+                          className="p-2.5 rounded-lg border border-gray-200 bg-[#F8F9FA] hover:border-emerald-600 hover:bg-emerald-50/40 text-left transition group shadow-2xs"
+                        >
+                          <div className="font-bold text-emerald-800 text-xs flex items-center gap-1 mb-0.5">
+                            <span>🌿</span> Green / ESG
+                          </div>
+                          <p className="text-[9.5px] text-gray-500 line-clamp-2">EU taxonomy CapEx & greenium bond tranche</p>
+                        </button>
+
+                        {/* 4. FX & Cross-Currency */}
+                        <button
+                          type="button"
+                          onClick={() => setCustomTextContent(
+                            "WORKFABRIC CONTEXT MEMO [FX RISK MANAGEMENT]:\n" +
+                            "Client: " + ingestClient.name + "\n" +
+                            "Author: Markus Becker (FX & Cross-Currency Structuring)\n" +
+                            "Desk Signal: Corporate Treasury flagged substantial unhedged USD revenue receivables from North American operations against EUR debt servicing obligations for FY2026/27.\n" +
+                            "Latent Opportunity: Propose a €450M 3Y USD/EUR Cross-Currency Swap (XCS) corridor with structured forward collar to insulate operating cash flows from FX volatility."
+                          )}
+                          className="p-2.5 rounded-lg border border-gray-200 bg-[#F8F9FA] hover:border-purple-600 hover:bg-purple-50/40 text-left transition group shadow-2xs"
+                        >
+                          <div className="font-bold text-purple-800 text-xs flex items-center gap-1 mb-0.5">
+                            <span>💱</span> FX & Cross-Ccy
+                          </div>
+                          <p className="text-[9.5px] text-gray-500 line-clamp-2">USD/EUR Cross-Currency Swap overlay</p>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Editable Structured Content */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-gray-700 font-bold text-xs">
+                          WorkFabric Context Content (Editable):
+                        </label>
+                        <span className="text-[10px] text-gray-400">Writes to ca.document_vector_chunks & ca.digital_twin_signals</span>
+                      </div>
+                      <textarea
+                        value={customTextContent}
+                        onChange={(e) => setCustomTextContent(e.target.value)}
+                        placeholder="Click a preset above or type custom tacit desk intelligence, origination memo, or cross-product structuring notes..."
+                        rows={6}
+                        className="w-full p-3 border border-blue-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-[#000066] focus:border-transparent bg-[#FAFCFF] leading-relaxed"
+                      />
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleIngestCustomText("CONTEXT_FABRIC", "WorkFabric Context Engine")}
+                      disabled={!customTextContent.trim() || ingestingAction}
+                      className="w-full bg-[#000066] hover:bg-[#1A224D] text-white font-bold py-2.5 rounded-lg shadow-sm transition disabled:opacity-40 flex items-center justify-center space-x-2"
+                    >
+                      {ingestingAction ? (
+                        <span>Recalibrating Digital Twin & Opportunity Scoring...</span>
+                      ) : (
+                        <>
+                          <span>🧠 Ingest to WorkFabric & Recalibrate Digital Twin</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Pitchbook Preview Modal */}
+        {/* Pitchbook Interactive Slide Deck & Copilot Modal */}
         {previewOpen && activeClient && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3">
-            <div className="bg-white rounded-2xl max-w-[1360px] w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-gray-200">
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+            <div className="bg-[#0C112B] border border-gray-800 rounded-2xl w-full max-w-[1420px] h-[92vh] flex flex-col shadow-2xl overflow-hidden text-white">
               
-              <div className="h-14 border-b border-gray-200 px-6 flex items-center justify-between bg-white shrink-0">
+              {/* Header Bar */}
+              <div className="h-14 border-b border-gray-800 px-6 flex items-center justify-between shrink-0 bg-[#0C112B]">
                 <div className="flex items-center space-x-3">
-                  <span className="bg-[#FF6200] text-white font-extrabold px-2 py-0.5 rounded text-xs">ING</span>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-sm">
-                      {activeClient.name} — Pitchbook & Deal Copilot
-                    </h3>
-                  </div>
+                  <span className="bg-[#FF6200] text-white font-extrabold px-2 py-0.5 rounded text-xs tracking-wider">PITCHBOOK PREVIEW</span>
+                  <h3 className="font-bold text-white text-sm truncate">
+                    {activeClient.name || activeClient.client_name || "Corporate Client"} — Instant Deal Deck (10 Slides)
+                  </h3>
+                  <span className="text-xs text-gray-400 bg-gray-900 border border-gray-800 px-2 py-0.5 rounded">
+                    Slide {currentSlideIndex + 1} of 10
+                  </span>
                 </div>
-
                 <div className="flex items-center space-x-3">
                   <button
-                    onClick={handleRunComplianceAudit}
+                    onClick={() => handleAuditCompliance()}
                     disabled={complianceAuditing}
-                    className={`inline-flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition shadow-sm ${
-                      complianceResult?.compliant
-                        ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                        : flaggedSlides.length > 0
-                        ? "bg-amber-50 text-amber-900 border-amber-300 ring-1 ring-amber-300"
-                        : "bg-white hover:bg-gray-50 text-[#000066] border-gray-300"
-                    } disabled:opacity-50`}
-                    title="Perform full-deck FINRA 2210 & MiFID II inspection"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#000066] hover:bg-[#1A224D] border border-blue-600/50 text-blue-200 transition"
                   >
-                    {complianceAuditing ? (
-                      <>
-                        <Loader2 size={13} className="animate-spin text-[#FF6200]" />
-                        <span>Auditing Full Deck...</span>
-                      </>
-                    ) : complianceResult?.compliant ? (
-                      <>
-                        <ShieldCheck size={14} className="text-emerald-600" />
-                        <span>100% Compliant</span>
-                      </>
-                    ) : flaggedSlides.length > 0 ? (
-                      <>
-                        <AlertTriangle size={14} className="text-amber-600" />
-                        <span>{flaggedSlides.length} Flags Identified</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldAlert size={14} className="text-[#FF6200]" />
-                        <span>Run Compliance Audit</span>
-                      </>
-                    )}
+                    <span>🛡️</span>
+                    <span>{complianceAuditing ? "Auditing MiFID II / FINRA..." : "Run Compliance Audit"}</span>
                   </button>
-
                   <button
-                    onClick={() => handleDownloadDeck(activeClient.id)}
-                    disabled={loadingClient === activeClient.id}
-                    className="inline-flex items-center space-x-1.5 bg-[#FF6200] hover:bg-[#E55800] text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm transition disabled:opacity-50"
+                    onClick={() => handleDownloadDeck(activeClient.client_id || activeClient.id || "CLI101")}
+                    disabled={loadingClient}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#FF6200] hover:bg-[#E55800] text-white transition shadow-sm"
                   >
-                    {loadingClient === activeClient.id ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        <span>Generating PPTX...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Download size={14} />
-                        <span>Download .PPTX Deck</span>
-                      </>
-                    )}
+                    <span>📥</span>
+                    <span>{loadingClient ? "Exporting PPTX..." : "Export PPTX"}</span>
                   </button>
-
                   <button
                     onClick={() => setPreviewOpen(false)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition"
                   >
                     <X size={18} />
                   </button>
                 </div>
               </div>
 
+              {/* Main Split Body: Slide Canvas (Left) + Copilot Sidebar (Right) */}
               <div className="flex-1 flex overflow-hidden">
-                {/* Left: Slide Navigation */}
-                <div className="w-52 border-r border-gray-200 bg-[#F8F9FA] p-2.5 overflow-y-auto space-y-1 shrink-0">
-                  <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider px-2 py-1">
-                    Deck Slides (10)
-                  </p>
-                  {getDynamicSlideTitles(activeClient).map((title, idx) => {
-                    const isFlagged = flaggedSlides.includes(idx + 1);
-
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentSlideIndex(idx)}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-md text-[11px] font-medium transition flex items-center justify-between ${
-                          currentSlideIndex === idx
-                            ? "bg-[#000066] text-white shadow-sm font-semibold"
-                            : isFlagged
-                            ? "bg-amber-50 text-amber-900 border border-amber-200"
-                            : "text-gray-700 hover:bg-gray-200/70"
-                        }`}
-                      >
-                        <span className="truncate">{title}</span>
-                        <div className="flex items-center space-x-1">
-                          {isFlagged && currentSlideIndex !== idx && (
-                            <span className="w-2 h-2 rounded-full bg-amber-500" title="Compliance enhancement recommended"></span>
-                          )}
-                          {currentSlideIndex === idx && <span className="w-1.5 h-1.5 rounded-full bg-[#FF6200]"></span>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Center: Slide Preview */}
-                <div className="flex-1 bg-[#EEF2F6] p-4 flex flex-col justify-between overflow-y-auto border-r border-gray-200">
-                  <div className="w-full h-[470px] shadow rounded-lg overflow-hidden bg-white">
-                    {getSlideContent(currentSlideIndex, activeClient)}
+                
+                {/* Left Area: Slide View & Bottom Thumbnails */}
+                <div className="flex-1 flex flex-col p-4 bg-gray-950 overflow-y-auto">
+                  {/* Slide Container */}
+                  <div className="flex-1 flex items-center justify-center min-h-[460px]">
+                    <div className="w-full max-w-[940px] aspect-[16/9] bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-800 text-gray-900 flex flex-col">
+                      {getSlideContent(currentSlideIndex, activeClient)}
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between w-full pt-3">
-                    <button
-                      onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
-                      disabled={currentSlideIndex === 0}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded border border-gray-300 text-[11px] font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40"
-                    >
-                      <ChevronLeft size={12} />
-                      <span>Previous</span>
-                    </button>
-
-                    <span className="text-[11px] font-medium text-gray-500">
-                      Slide <b className="text-gray-900">{currentSlideIndex + 1}</b> of 10
-                    </span>
-
-                    <button
-                      onClick={() => setCurrentSlideIndex(Math.min(9, currentSlideIndex + 1))}
-                      disabled={currentSlideIndex === 9}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded border border-gray-300 text-[11px] font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40"
-                    >
-                      <span>Next</span>
-                      <ChevronRight size={12} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Right: Copilot Chat */}
-                <div className="w-96 bg-white flex flex-col overflow-hidden shrink-0">
-                  <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-white flex items-center justify-between">
+                  {/* Bottom Navigation & 10 Slide Buttons */}
+                  <div className="mt-3 pt-3 border-t border-gray-800 flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 rounded-md bg-[#FF6200] text-white flex items-center justify-center">
-                        <Sparkles size={14} />
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-1.5">
-                            <h4 className="text-xs font-bold text-gray-900">ING Copilot</h4>
-                            <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[8px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <span className="w-1 h-1 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>
-                              Live
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-gray-500">Deal Structuring & Advisory</p>
-                      </div>
+                      <button
+                        onClick={() => setCurrentSlideIndex((prev) => Math.max(0, prev - 1))}
+                        disabled={currentSlideIndex === 0}
+                        className="px-3 py-1 text-xs font-bold rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 disabled:opacity-30"
+                      >
+                        ◀ Prev
+                      </button>
+                      <button
+                        onClick={() => setCurrentSlideIndex((prev) => Math.min(9, prev + 1))}
+                        disabled={currentSlideIndex === 9}
+                        className="px-3 py-1 text-xs font-bold rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 disabled:opacity-30"
+                      >
+                        Next ▶
+                      </button>
                     </div>
 
-                    {flaggedSlides.length > 0 && (
-                      <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded">
-                        Action Needed
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="p-2 border-b border-gray-100 bg-[#F9FAFB] flex flex-wrap gap-1.5">
-                    {[
-                      "Run Compliance Audit",
-                      "Apply compliance recommendations",
-                      "In Slide 7, update iTraxx Main to 60 bps"
-                    ].map((chip, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleSendMessage(chip)}
-                        className="text-[10px] bg-white hover:bg-orange-50 hover:text-[#FF6200] hover:border-orange-200 text-gray-600 border border-gray-200 px-2 py-1 rounded-full transition"
-                      >
-                        {chip}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex-1 p-3 overflow-y-auto space-y-3 bg-[#FDFDFD] text-xs">
-                    {chatMessages.map((msg, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
-                      >
-                        <div className="flex items-center space-x-1 mb-1">
-                          <span className="text-[9px] font-bold text-gray-400 uppercase">
-                            {msg.sender === "user" ? "You" : "ING Copilot"}
-                          </span>
-                          <span className="text-[9px] text-gray-400">· {msg.time}</span>
-                        </div>
-                        <div
-                          className={`p-3 rounded-xl max-w-[92%] leading-relaxed ${
-                            msg.sender === "user"
-                              ? "bg-[#0C112B] text-white rounded-br-none"
-                              : "bg-[#F3F4F6] text-gray-800 rounded-bl-none border border-gray-200"
+                    {/* 10-Slide List */}
+                    <div className="flex space-x-1.5 overflow-x-auto pb-1">
+                      {[
+                        "1. Summary",
+                        "2. Profile",
+                        "3. Maturities",
+                        "4. Macro/Rates",
+                        "5. Mandate",
+                        "6. Scenario",
+                        "7. Pricing",
+                        "8. ESG / Desk",
+                        "9. Timeline",
+                        "10. ING Team"
+                      ].map((title, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentSlideIndex(idx)}
+                          className={`px-2.5 py-1 rounded text-[11px] font-semibold whitespace-nowrap transition border ${
+                            currentSlideIndex === idx
+                              ? "bg-[#FF6200] text-white border-[#FF6200]"
+                              : "bg-gray-900 text-gray-400 hover:text-gray-200 border-gray-800 hover:border-gray-700"
                           }`}
                         >
-                          <FormattedChatText content={msg.text} />
+                          {title}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-                          {msg.isComplianceCard && (
-                            <div className="mt-3 pt-2.5 border-t border-gray-200">
-                              <button
-                                onClick={() => handleApplyRemediations(msg.remedies)}
-                                className="w-full inline-flex items-center justify-center space-x-1.5 bg-[#000066] hover:bg-[#1A224D] text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-sm transition"
-                              >
-                                <Zap size={13} className="text-[#FF6200]" />
-                                <span>Apply Compliance Remediations</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    {copilotLoading && (
-                      <div className="flex items-center space-x-2 text-gray-400 text-xs">
-                        <Loader2 size={14} className="animate-spin text-[#FF6200]" />
-                        <span>Copilot reasoning over pitchbook structure...</span>
-                      </div>
-                    )}
-                    <div ref={chatEndRef} />
+                {/* Right Area: Origination Copilot Sidebar */}
+                <div className="w-[410px] border-l border-gray-800 bg-[#0E1535] flex flex-col shrink-0">
+                  <div className="h-12 border-b border-gray-800 px-4 flex items-center justify-between bg-[#0C112B]">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-base">🤖</span>
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-white">Origination Copilot</span>
+                    </div>
+                    <span className="text-[10px] bg-blue-950 text-blue-400 font-bold px-2 py-0.5 rounded border border-blue-900">
+                      Gemini Pro · Vertex AI
+                    </span>
                   </div>
 
-                  <div className="p-2.5 border-t border-gray-200 bg-white">
+                  {/* Messages */}
+                  <div className="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+                    {chatMessages.length === 0 ? (
+                      <div className="text-gray-400 space-y-3">
+                        <div className="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
+                          <p className="font-bold text-white mb-1">👋 Welcome to Origination Copilot</p>
+                          <p className="text-[11px] leading-relaxed">
+                            Interact directly with the pitchbook parameters, audit regulatory compliance, or calibrate rate sensitivity:
+                          </p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Quick Actions</p>
+                          <button
+                            onClick={() => handleAuditCompliance()}
+                            className="w-full text-left p-2 rounded bg-gray-900/80 hover:bg-gray-800 border border-gray-800 text-[11px] text-blue-300 transition"
+                          >
+                            🛡️ Run FINRA Rule 2210 & MiFID II Audit
+                          </button>
+                          <button
+                            onClick={() => handleSendMessage("Update Slide 7 with 5Y Swap 2.62% and spread 115 bps")}
+                            className="w-full text-left p-2 rounded bg-gray-900/80 hover:bg-gray-800 border border-gray-800 text-[11px] text-orange-300 transition"
+                          >
+                            📊 Recalibrate Slide 7 with latest Swap Rates
+                          </button>
+                          <button
+                            onClick={() => handleSendMessage("Apply compliance recommendations and certify full deck")}
+                            className="w-full text-left p-2 rounded bg-gray-900/80 hover:bg-gray-800 border border-gray-800 text-[11px] text-emerald-300 transition"
+                          >
+                            ✅ Auto-apply mandatory MiFID II disclosures
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      chatMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          className={`p-3 rounded-lg text-xs leading-relaxed ${
+                            msg.role === "user"
+                              ? "bg-[#FF6200]/20 border border-[#FF6200]/40 text-orange-100 ml-4"
+                              : "bg-gray-900 border border-gray-800 text-gray-200 mr-2"
+                          }`}
+                        >
+                          <div className="font-bold text-[10px] uppercase text-gray-400 mb-1">
+                            {msg.role === "user" ? "You" : "Origination Copilot"}
+                          </div>
+                          <div className="whitespace-pre-wrap">{msg.text}</div>
+                        </div>
+                      ))
+                    )}
+                    {copilotLoading && (
+                      <div className="p-3 bg-gray-900 rounded-lg border border-gray-800 text-gray-400 text-xs flex items-center space-x-2">
+                        <span className="animate-spin text-sm">⏳</span>
+                        <span>Reasoning over market curves & regulatory rules...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Chat Input */}
+                  <div className="p-3 border-t border-gray-800 bg-[#0C112B]">
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
-                        handleSendMessage();
+                        if (inputQuery?.trim()) {
+                          handleSendMessage(inputQuery);
+                          setInputQuery("");
+                        }
                       }}
-                      className="flex items-center space-x-2"
+                      className="flex space-x-2"
                     >
                       <input
                         type="text"
-                        value={inputQuery}
+                        value={inputQuery || ""}
                         onChange={(e) => setInputQuery(e.target.value)}
-                        placeholder={`Tell Copilot to edit or check ${activeClient.name} deck...`}
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#FF6200]"
+                        placeholder="Instruct Copilot (e.g. adjust bond size, run audit)..."
+                        className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6200]"
                       />
                       <button
                         type="submit"
-                        disabled={!inputQuery.trim() || copilotLoading}
-                        className="bg-[#0C112B] hover:bg-[#1A224D] text-white p-1.5 rounded-lg disabled:opacity-40 transition"
+                        disabled={copilotLoading || !inputQuery?.trim()}
+                        className="bg-[#FF6200] hover:bg-[#E55800] text-white px-3 py-2 rounded-lg text-xs font-bold transition disabled:opacity-40"
                       >
-                        <Send size={14} />
+                        Send
                       </button>
                     </form>
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
         )}
+
       </div>
     </ErrorBoundary>
   );

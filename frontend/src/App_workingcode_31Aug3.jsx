@@ -1982,140 +1982,71 @@ export default function App() {
                   </div>
                 )}
 
-                {/* WorkFabric Context Memo Tab (All 4 Product Families) */}
-                  {ingestTab === "context_fabric" && (
-                    <div className="space-y-4">
-                      <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-base">🧠</span>
-                            <span className="font-extrabold text-[#000066] text-xs uppercase tracking-wider">WorkFabric Context Engine</span>
-                          </div>
-                          <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded border border-blue-200">Systems of Work</span>
+                {/* WorkFabric Context Memo Tab (Dedicated 4th Channel) */}
+                {ingestTab === "context_fabric" && (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-base">🧠</span>
+                          <span className="font-extrabold text-[#000066] text-xs uppercase tracking-wider">WorkFabric Context Engine</span>
                         </div>
-                        <p className="text-[11px] text-blue-950 mt-1 leading-snug font-medium">
-                          Captures tacit knowledge, origination working notes, and latent opportunities across all 4 product families.
-                        </p>
+                        <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded border border-blue-200">Systems of Work</span>
                       </div>
+                      <p className="text-[11px] text-blue-950 mt-1 leading-snug font-medium">
+                        Captures tacit knowledge, origination working notes, and latent opportunities from ongoing deal workflows.
+                      </p>
+                    </div>
 
-                      {/* 4 Product Family Presets (2x2 Grid) */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        {/* 1. DCM Origination Note */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC DCM MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Debt Capital Markets (DCM)
-` +
-                            `Author: Luca Moretti (DCM Origination)
-` +
-                            `Reconciliation: Public materials show recent capital markets access, but capex should not be equated with funding gap. ` +
-                            `Residual 2026-2027 debt maturities remain at sizable volume. Candidate issue: residual funding sequencing and liability management with senior benchmark tranche.`
-                          )}
-                          className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#000066] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>📝</span> DCM Origination Note Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Reconcile CapEx vs. bond issuance to uncover latent funding gap</p>
-                        </button>
-
-                        {/* 2. Latent Pre-Hedge Overlay */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC PRE-HEDGE OVERLAY MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Rate Risk Immunisation & Derivatives
-` +
-                            `Author: Roman Weiss (Rates Structuring)
-` +
-                            `Signal: Executive Committee authorized accelerated debt rollover. Mandate requires EUR 2.0B Senior EMTN benchmark with immediate ` +
-                            `EUR 1.2B 6Y Fixed-to-Floating IRS pre-hedge to capture favorable swap rates ahead of ECB policy cycle.`
-                          )}
-                          className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#000066] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>🎯</span> Latent Pre-Hedge Overlay Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Lock spread savings and interest rate swap overlay ahead of rate cycle</p>
-                        </button>
-
-                        {/* 3. Sustainable Finance Framework */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC SUSTAINABLE FINANCE MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Green & Sustainability-Linked Structuring
-` +
-                            `Author: Marta Nowak (ESG Structuring Lead)
-` +
-                            `Framework: Verified ICMA Green Bond Principles & EU Taxonomy alignment. Ring-fenced €1.5B eligible clean energy asset pool. ` +
-                            `Recommended structure: Inaugural €750M 8Y Green EMTN with 3-7 bps new issue greenium advantage.`
-                          )}
-                          className="p-2.5 rounded-lg border border-emerald-200 bg-white hover:border-emerald-600 hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-emerald-800 text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>🌿</span> Sustainable Finance Mandate Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Structure Green/SLB framework with SPO verification & greenium pricing</p>
-                        </button>
-
-                        {/* 4. Strategic FX Architecture */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC FX RISK ARCHITECTURE MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Strategic FX Architecture & Hedging
-` +
-                            `Author: Sector FX Specialist Desk
-` +
-                            `Exposure: Addressing unhedged USD commercial revenue expansion. Recommend multi-tenor layered corridors with ` +
-                            `rolling 12M–24M zero-cost participating collars protecting group gross operating margin.`
-                          )}
-                          className="p-2.5 rounded-lg border border-amber-200 bg-white hover:border-[#FF6200] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#FF6200] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>💱</span> Strategic FX Corridor Note Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Layered participating FX collars protecting group EBITDA margin</p>
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 font-bold mb-1.5 text-xs">WorkFabric Context Memo Content:</label>
-                        <textarea
-                          value={customTextContent}
-                          onChange={(e) => setCustomTextContent(e.target.value)}
-                          placeholder="Enter structured WorkFabric memo, tacit desk note, or latent opportunity synthesis..."
-                          rows={4}
-                          className="w-full p-3 border border-blue-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-[#000066] focus:border-transparent bg-[#FAFCFF]"
-                        />
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setCustomTextContent("WORKFABRIC DCM MEMO:\nClient: " + ingestClient.name + "\nAuthor: Luca Moretti (DCM Origination)\nReconciliation: Public materials show recent capital markets access, but capex should not be equated with funding gap. Residual 2026-2027 debt maturities remain at sizable volume. Candidate issue: residual funding sequencing and liability management with pre-hedge overlay.")}
+                        className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] text-left transition shadow-2xs"
+                      >
+                        <div className="font-bold text-[#000066] text-xs flex items-center gap-1 mb-0.5">
+                          <span>📝</span> DCM Origination Note Preset
+                        </div>
+                        <p className="text-[10px] text-gray-500">Reconcile CapEx vs. bond issuance to uncover latent funding gap</p>
+                      </button>
 
                       <button
-                        onClick={() => handleIngestCustomText("CONTEXT_FABRIC", `WorkFabric Context Engine (${ingestClient.name})`)}
-                        disabled={!customTextContent.trim() || ingestingAction}
-                        className="w-full bg-[#000066] hover:bg-[#1A224D] text-white font-bold py-2.5 rounded-lg shadow-sm transition disabled:opacity-40 flex items-center justify-center space-x-1.5"
+                        onClick={() => setCustomTextContent("WORKFABRIC LATENT OPPORTUNITY:\nClient: " + ingestClient.name + "\nAuthor: Roman Weiss (Rates Specialist)\nSignal: Executive Committee authorized accelerated debt rollover. Mandate requires EUR 2.0B 6Y Senior EMTN benchmark with immediate EUR 1.2B 6Y Fixed-to-Floating IRS pre-hedge to capture favorable swap rates ahead of ECB cycle.")}
+                        className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] text-left transition shadow-2xs"
                       >
-                        {ingestingAction ? (
-                          <span>Ingesting to Context Fabric & Updating Twin...</span>
-                        ) : (
-                          <>
-                            <span>🧠 Ingest to WorkFabric & Recalibrate Digital Twin</span>
-                          </>
-                        )}
+                        <div className="font-bold text-[#000066] text-xs flex items-center gap-1 mb-0.5">
+                          <span>🎯</span> Latent Pre-Hedge Overlay Preset
+                        </div>
+                        <p className="text-[10px] text-gray-500">Lock spread savings and interest rate swap overlay ahead of rate cycle</p>
                       </button>
                     </div>
-                  )}
-                </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-bold mb-1.5 text-xs">WorkFabric Context Memo Content:</label>
+                      <textarea
+                        value={customTextContent}
+                        onChange={(e) => setCustomTextContent(e.target.value)}
+                        placeholder="Enter structured WorkFabric memo, tacit desk note, or latent opportunity synthesis..."
+                        rows={5}
+                        className="w-full p-3 border border-blue-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-[#000066] focus:border-transparent bg-[#FAFCFF]"
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => handleIngestCustomText("CONTEXT_FABRIC", "WorkFabric Context Engine (Luca Moretti)")}
+                      disabled={!customTextContent.trim() || ingestingAction}
+                      className="w-full bg-[#000066] hover:bg-[#1A224D] text-white font-bold py-2.5 rounded-lg shadow-sm transition disabled:opacity-40 flex items-center justify-center space-x-1.5"
+                    >
+                      {ingestingAction ? (
+                        <span>Ingesting to Context Fabric & Updating Twin...</span>
+                      ) : (
+                        <>
+                          <span>🧠 Ingest to WorkFabric & Recalibrate Digital Twin</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

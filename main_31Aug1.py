@@ -428,78 +428,21 @@ def get_opportunities():
                 else:
                     chips.append("Active balance sheet review")
 
-                # Fetch Segment 3 Context Fabric Signals
-                cf_desc = ""
-                cf_latent = ""
-                try:
-                    cur.execute("""
-                        SELECT description, trigger_summary 
-                        FROM ca.digital_twin_signals 
-                        WHERE client_id = %s OR client_id LIKE %s 
-                        ORDER BY signal_id DESC LIMIT 1;
-                    """, (cid_str, f"{cid_str}%"))
-                    sig_row = cur.fetchone()
-                    if sig_row:
-                        cf_desc = sig_row[0] or ""
-                        cf_latent = sig_row[1] or ""
-                except Exception:
-                    pass
-
-                # Fetch Ingestion Badges & Attribution Author
-                channels = []
-                attrib_author = "Internal Dossier & Working Notes"
-                try:
-                    cur.execute("""
-                        SELECT DISTINCT source_channel 
-                        FROM ca.document_vector_chunks 
-                        WHERE client_id = %s OR client_id LIKE %s;
-                    """, (cid_str, f"{cid_str}%"))
-                    ch_rows = cur.fetchall()
-                    if ch_rows:
-                        channels = [r[0] for r in ch_rows if r[0]]
-                    
-                    cur.execute("""
-                        SELECT source_name 
-                        FROM ca.document_vector_chunks 
-                        WHERE (client_id = %s OR client_id LIKE %s) AND source_name IS NOT NULL 
-                        LIMIT 1;
-                    """, (cid_str, f"{cid_str}%"))
-                    auth_row = cur.fetchone()
-                    if auth_row and auth_row[0]:
-                        attrib_author = auth_row[0]
-                except Exception:
-                    pass
-
-                if not channels:
-                    channels = ["NEWS_RSS", "ANALYST_NOTE"]
-
-                if not cf_desc:
-                    cf_desc = f"{name_str} capital structure monitoring active. Balance sheet refinancing and rates hedge analysis prepared."
-                if not cf_latent:
-                    cf_latent = f"Pre-hedge interest rate swap window and bond issuance advisory."
-
                 opps.append({
                     "id": cid_str,
                     "name": name_str,
                     "type": opp_type,
                     "is_debt": float(m24) > 0 or total_nominal > 0 or "DEBT" in opp_type.upper(),
                     "subtitle": f"{tier or 'Tier 1'} client ({hq or sector})",
-                    "tier": tier or "Tier 1",
                     "score": score_val,
                     "score_num": int(score_num),
                     "chips": chips,
                     "callout": f"{why_now} {action}".strip(),
-                    "why_now": why_now or "Active market rates dynamics and corporate funding schedule.",
-                    "action": action or "Proactive balance sheet advisory and fixed-to-floating rates review.",
-                    "cf_description": cf_desc,
-                    "cf_latent": cf_latent,
-                    "ingestion_channels": channels,
-                    "attribution_author": attrib_author,
                     "slides_count": 10,
                     "net_debt_str": f"€{float(net_debt):,.0f}M" if float(net_debt) > 0 else "—",
                     "liquidity_str": f"€{float(liq):,.0f}M" if float(liq) > 0 else "—",
                     "debt_maturing_24m_str": f"€{float(m24):,.0f}M" if float(m24) > 0 else "—",
-                    "rm_name": rm or "Coverage Director"
+                    "rm_name": rm
                 })
 
             cur.close()

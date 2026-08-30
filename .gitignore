@@ -6,3 +6,7 @@ __pycache__/
 frontend/dist/
 frontend/node_modules/
 .env
+*.bak*
+frontend/src/*.bak*
+frontend/patch_app.js
+archive/

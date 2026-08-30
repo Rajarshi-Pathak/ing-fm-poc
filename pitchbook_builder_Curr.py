@@ -158,14 +158,14 @@ def detect_product_family(ctx):
     """Detect product family dynamically from opportunity type and DB context."""
     p_type = str(ctx.get("opportunity_type") or ctx.get("type") or ctx.get("product_family") or "").lower()
     
-    if any(k in p_type for k in ["refinanc", "dcm", "emtn", "bond"]):
-        return "DCM_REFI"
-    if any(k in p_type for k in ["green", "sustainable", "esg"]):
-        return "GREEN_ESG"
-    if any(k in p_type for k in ["rate", "irs", "swap"]):
-        return "RATES_HEDGE"
-    if any(k in p_type for k in ["fx", "currency", "collar"]):
+    if any(k in p_type for k in ["fx", "currency", "foreign exchange", "collar", "commodit", "bunker", "freight"]):
         return "FX_HEDGE"
+    if any(k in p_type for k in ["green", "sustainable", "esg", "sustainability"]):
+        return "GREEN_ESG"
+    if any(k in p_type for k in ["rate", "irs", "pre-hedge", "swap"]):
+        return "RATES_HEDGE"
+    if any(k in p_type for k in ["refinanc", "dcm", "emtn", "bond", "capital market"]):
+        return "DCM_REFI"
         
     return "DCM_REFI"
 
@@ -465,7 +465,9 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     
     # -------- Client Data from Database (with override support) --------
     client_name = ov.get("client_name", ctx.get("client_name", "Corporate Client"))
-    p_fam = ov.get("product_family", ctx.get("product_family", "DCM_REFI"))
+    raw_pf = ov.get("product_family") or (opp.get("product_family") if isinstance(opp, dict) else None) or ctx.get("product_family") or ctx.get("opportunity_type") or ""
+    detection_dict = {"product_family": str(raw_pf), **ctx, **(opp if isinstance(opp, dict) else {}), **ov}
+    p_fam = detect_product_family(detection_dict)
     sm = get_slide_meta(p_fam)
     rm_name = ov.get("rm_name", ctx.get("rm_name", "Senior Relationship Manager"))
     
@@ -1081,7 +1083,7 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     r_title_box = s6.shapes.add_textbox(Inches(6.4), Inches(1.5), Inches(6.1), Inches(0.4))
     r_tf = r_title_box.text_frame
     r_p = r_tf.paragraphs[0]
-    r_p.text = "COST COMPARISON VS CONVENTIONAL ISSUANCE" if p_fam == "GREEN_ESG" else ("Illustrative FX Outcome by Scenario" if p_fam == "FX_HEDGE" else "Illustrative All-In Cost by Scenario")
+    r_p.text = "COST COMPARISON VS CONVENTIONAL ISSUANCE" if p_fam == "GREEN_ESG" else ("ILLUSTRATIVE FX MARGIN IMPACT BY SCENARIO" if p_fam == "FX_HEDGE" else "Illustrative All-In Cost by Scenario")
     r_p.alignment = PP_ALIGN.CENTER
     r_p.font.name = "Arial"
     r_p.font.size = Pt(12)
@@ -1103,11 +1105,11 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
             ("Plain-Vanilla Senior EMTN", f"Mid-Swap + {calc['spread_bps']} bps (Flat)", "Baseline")
         ]
     elif p_fam == "FX_HEDGE":
-        s6_headers = ["EUR/USD Scenario", "Unhedged", "Collared"]
+        s6_headers = ["FX Scenario", "Layered Collar Strategy", "Unhedged Exposure"]
         s6_data = [
-            ("EUR/USD 1.12 (+5%)", fx_up_unhedged, fx_up_hedged),
-            ("EUR/USD 1.065 (Spot)", fx_spot_unhedged, fx_spot_hedged),
-            ("EUR/USD 1.02 (-4%)", fx_down_unhedged, fx_down_hedged)
+            ("EUR/USD +5% (USD Weakens)", "1.0850 Floor Protected", "-$450M Impact"),
+            ("Spot Unchanged (1.0650)", "1.0650 Locked", "1.0650 Spot"),
+            ("EUR/USD -5% (USD Strengthens)", "Participate to 1.0450", "+$380M Gain")
         ]
     else:
         s6_headers = ["Rate Scenario", "Refinance Today", "Wait 6 months"]

@@ -1475,11 +1475,11 @@ export default function App() {
                       <h2 className="text-xl font-bold text-gray-900">{opp.name}</h2>
                       <p className="text-xs text-gray-500 italic mb-3">{opp.subtitle}</p>
 
-                        {/* 4-SEGMENT 2X2 ENTERPRISE GRID (100% DB DRIVEN) */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5 items-stretch">
+                        {/* 3-SEGMENT ENTERPRISE STRUCTURE */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                           
-                          {/* SEGMENT 1: CLIENT DATA */}
-                          <div className="bg-[#F8FAFC] border border-gray-200/90 rounded-lg p-3 flex flex-col justify-between shadow-2xs">
+                          {/* SEGMENT 1: CLIENT RELATED DATA (STATIC) */}
+                          <div className="bg-[#F8FAFC] border border-gray-200/80 rounded-lg p-3 flex flex-col justify-between shadow-xs">
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-gray-200">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase">
@@ -1490,64 +1490,64 @@ export default function App() {
                               <div className="space-y-1.5 text-[11px]">
                                 <div className="flex justify-between">
                                   <span className="text-gray-500 font-medium">Coverage RM:</span>
-                                  <span className="font-semibold text-gray-900 truncate max-w-[140px]">{opp.rm_name}</span>
+                                  <span className="font-semibold text-gray-900 truncate max-w-[110px]">{opp.rm_name || "G. Romano"}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-gray-500 font-medium">Credit Rating:</span>
-                                  <span className="font-semibold text-gray-900">{opp.tier}</span>
+                                  <span className="font-semibold text-gray-900">{opp.tier || "Tier 1 (BBB+)"}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-gray-500 font-medium">Net Debt:</span>
-                                  <span className="font-semibold text-gray-900">{opp.net_debt_str}</span>
+                                  <span className="font-semibold text-gray-900">{opp.net_debt_str || (opp.net_debt ? `€${opp.net_debt}M` : "€16,200M")}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-gray-500 font-medium">Available Liquidity:</span>
-                                  <span className="font-semibold text-emerald-700">{opp.liquidity_str}</span>
+                                  <span className="font-semibold text-emerald-700">{opp.liquidity_str || (opp.liquidity ? `€${opp.liquidity}M` : "€7,800M")}</span>
                                 </div>
                                 <div className="flex justify-between pt-1 border-t border-gray-100">
                                   <span className="text-gray-600 font-bold">24M Maturity Wall:</span>
-                                  <span className="font-extrabold text-[#FF6200]">{opp.debt_maturing_24m_str}</span>
+                                  <span className="font-extrabold text-[#FF6200]">{opp.debt_maturing_24m_str || "€3,000M"}</span>
                                 </div>
                               </div>
                             </div>
                           </div>
 
-                          {/* SEGMENT 2: MARKET DATA */}
-                          <div className="bg-[#F8FAFC] border border-gray-200/90 rounded-lg p-3 flex flex-col justify-between shadow-2xs">
+                          {/* SEGMENT 2: MARKET DATA (STATIC) */}
+                          <div className="bg-[#F8FAFC] border border-gray-200/80 rounded-lg p-3 flex flex-col justify-between shadow-xs">
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-gray-200">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase">
                                   Segment 2: Market Data
                                 </span>
-                                <span className="text-[9px] bg-purple-100 text-purple-800 font-bold px-1.5 py-0.2 rounded">Market DB</span>
+                                <span className="text-[9px] bg-purple-100 text-purple-800 font-bold px-1.5 py-0.2 rounded">Static</span>
                               </div>
                               <div className="space-y-1.5 text-[11px]">
                                 <div className="flex justify-between">
                                   <span className="text-gray-500 font-medium">5Y EUR Swap:</span>
-                                  <span className="font-bold text-[#000066]">{opp.eur_5y_swap || "2.62%"}</span>
+                                  <span className="font-bold text-[#000066]">2.62% (+4 bps)</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-gray-500 font-medium">10Y German Bund:</span>
-                                  <span className="font-semibold text-gray-900">{opp.eur_10y_bund || "2.61%"}</span>
+                                  <span className="font-semibold text-gray-900">2.61%</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500 font-medium">{opp.spread_label || "5Y Credit Spread"}:</span>
-                                  <span className="font-bold text-emerald-700">{opp.client_spread_bps || "78 bps"}</span>
+                                  <span className="text-gray-500 font-medium">iTraxx Europe Main:</span>
+                                  <span className="font-semibold text-emerald-700">58 bps (Tight)</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500 font-medium">All-In Benchmark Yield:</span>
-                                  <span className="font-bold text-[#FF6200]">{opp.client_yield || "3.40%"}</span>
+                                  <span className="text-gray-500 font-medium">EUR Green Spread:</span>
+                                  <span className="font-bold text-[#FF6200]">77 bps (-5 bps)</span>
                                 </div>
                                 <div className="flex justify-between pt-1 border-t border-gray-100">
-                                  <span className="text-gray-600 font-bold">5Y USD Swap Benchmark:</span>
-                                  <span className="font-semibold text-gray-900">{opp.usd_5y_swap || "3.92%"}</span>
+                                  <span className="text-gray-600 font-bold">ECB Refi / Fed:</span>
+                                  <span className="font-semibold text-gray-900">2.25% / 4.25%</span>
                                 </div>
                               </div>
                             </div>
                           </div>
 
-                          {/* SEGMENT 3: CONTEXT FABRIC */}
-                          <div className="bg-[#F8FAFC] border border-blue-200/90 rounded-lg p-3 flex flex-col justify-between shadow-2xs">
+                          {/* SEGMENT 3: CONTEXT FABRIC & INGESTION SIGNALS */}
+                          <div className="bg-[#F8FAFC] border border-blue-200/80 rounded-lg p-3 flex flex-col justify-between shadow-xs">
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-blue-100">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase flex items-center gap-1">
@@ -1556,48 +1556,47 @@ export default function App() {
                                 <span className="text-[9px] bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.5 rounded border border-blue-200">Fabric AI</span>
                               </div>
 
-                              {/* Dynamic Ingestion Badges */}
+                              {/* Multi-Channel Ingestion Badges */}
                               <div className="flex flex-wrap gap-1 mb-2">
-                                {(opp.ingestion_channels || ["NEWS_RSS", "ANALYST_NOTE"]).map((ch, idx) => (
-                                  <span key={idx} className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
-                                    {ch === "NEWS_RSS" ? "🌐 RSS" : (ch === "CLIENT_EMAIL" ? "✉️ Email" : (ch === "TEAMS_CHAT" ? "💬 Teams" : "📄 Notes"))}
-                                  </span>
-                                ))}
+                                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-0.5">
+                                  <span>🌐</span> RSS
+                                </span>
+                                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-0.5">
+                                  <span>✉️</span> Email
+                                </span>
+                                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center gap-0.5">
+                                  <span>💬</span> Teams
+                                </span>
+                                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 flex items-center gap-0.5">
+                                  <span>📄</span> Notes
+                                </span>
                               </div>
 
-                              {/* Hoverable Context Fabric Signal */}
-                              <div 
-                                className="text-[10.5px] text-gray-700 leading-snug line-clamp-3 mb-2 bg-white p-2 rounded border border-gray-200 shadow-2xs cursor-help hover:border-blue-400 hover:shadow-xs transition-all"
-                                title={opp.cf_description}
-                              >
+                              {/* Context Fabric Signal Description */}
+                              <div className="text-[10.5px] text-gray-700 leading-snug line-clamp-3 mb-2 bg-white p-1.5 rounded border border-gray-200/70 shadow-2xs">
                                 <span className="font-bold text-gray-900">Signal: </span>
-                                {opp.cf_description}
+                                {opp.cf_description || opp.callout || "Multi-source intelligence reconciled across public debt filings and working notes."}
                               </div>
 
-                              {/* Hoverable Latent Opportunity */}
-                              <div 
-                                className="text-[10px] bg-blue-50/80 border border-blue-200/90 rounded p-1.5 text-blue-950 cursor-help hover:bg-blue-100/90 transition-all"
-                                title={opp.cf_latent}
-                              >
+                              {/* Latent Opportunity Tag */}
+                              <div className="text-[10px] bg-blue-50/70 border border-blue-100 rounded p-1.5 text-blue-950">
                                 <div className="font-extrabold text-[9px] uppercase tracking-wider text-blue-800 flex items-center gap-1">
                                   <span>🎯</span> Latent Opportunity
                                 </div>
-                                <div className="font-semibold line-clamp-1 mt-0.5">
-                                  {opp.cf_latent}
+                                <div className="font-semibold truncate mt-0.5">
+                                  {opp.cf_latent || "Residual Sustainable Liability Management"}
                                 </div>
                               </div>
                             </div>
 
-                            {/* Working Note Attribution */}
-                            <div className="mt-2 pt-1.5 border-t border-gray-200 text-[9.5px] text-gray-500 truncate flex items-center justify-between">
-                              <span className="truncate" title={opp.attribution_author}>
-                                📋 {opp.attribution_author}
-                              </span>
+                            {/* Attribution Footer */}
+                            <div className="mt-2 pt-1 border-t border-gray-200 text-[9.5px] text-gray-500 truncate flex items-center justify-between">
+                              <span className="truncate">📋 {opp.attribution_author || "Luca Moretti (DCM Origination)"}</span>
                             </div>
                           </div>
 
-                          {/* SEGMENT 4: MANDATE & ACTION */}
-                          <div className="bg-gradient-to-br from-orange-50/90 via-white to-orange-50/40 border border-orange-200/90 rounded-lg p-3 flex flex-col justify-between shadow-2xs">
+                          {/* SEGMENT 4: SYNTHESIZED OPPORTUNITY & DEAL MANDATE */}
+                          <div className="bg-gradient-to-br from-orange-50/70 via-white to-orange-50/30 border border-orange-200 rounded-lg p-3 flex flex-col justify-between shadow-xs">
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-orange-200/70">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#FF6200] uppercase flex items-center gap-1">
@@ -1607,23 +1606,17 @@ export default function App() {
                               </div>
 
                               <div className="space-y-1.5 text-[10.5px]">
-                                <div 
-                                  className="cursor-help bg-white/60 p-1.5 rounded border border-orange-100 hover:border-orange-300 transition-colors"
-                                  title={opp.why_now}
-                                >
-                                  <span className="font-bold text-orange-950 block text-[9.5px] uppercase tracking-wider">Catalyst Rationale:</span>
+                                <div>
+                                  <span className="font-bold text-orange-950 block text-[10px] uppercase tracking-wider">Catalyst Rationale:</span>
                                   <p className="text-gray-800 font-medium leading-snug line-clamp-2 mt-0.5">
-                                    {opp.why_now}
+                                    {opp.why_now || opp.callout || "Strategic catalyst detected across public debt filings and yield curve movements."}
                                   </p>
                                 </div>
 
-                                <div 
-                                  className="pt-1.5 border-t border-orange-100/80 cursor-help bg-white/60 p-1.5 rounded border border-orange-100 hover:border-orange-300 transition-colors"
-                                  title={opp.action}
-                                >
-                                  <span className="font-bold text-orange-950 block text-[9.5px] uppercase tracking-wider">Proposed Execution:</span>
+                                <div className="pt-1 border-t border-orange-100/80">
+                                  <span className="font-bold text-orange-950 block text-[10px] uppercase tracking-wider">Proposed Execution:</span>
                                   <p className="text-gray-900 font-semibold leading-snug line-clamp-2 mt-0.5">
-                                    {opp.action}
+                                    {opp.action || opp.callout || "Execute combined benchmark issuance and rate pre-hedge."}
                                   </p>
                                 </div>
                               </div>
@@ -1649,7 +1642,7 @@ export default function App() {
                             title="Ingest live RSS news, emails, or documents"
                           >
                             <Rss size={13} />
-                            <span>Ingestion Engine</span>
+                            <span>Ingest News / Docs</span>
                           </button>
 
                           <button
@@ -1808,42 +1801,33 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="flex border-b border-gray-200 bg-[#F8F9FA] px-6 text-xs font-semibold overflow-x-auto">
+              <div className="flex border-b border-gray-200 bg-[#F8F9FA] px-6 text-xs font-semibold">
                 <button
                   onClick={() => { setIngestTab("rss"); setIngestSuccessMsg(null); }}
-                  className={`py-3 px-3.5 border-b-2 flex items-center space-x-1.5 shrink-0 ${
+                  className={`py-3 px-4 border-b-2 flex items-center space-x-1.5 ${
                     ingestTab === "rss" ? "border-[#FF6200] text-[#FF6200]" : "border-transparent text-gray-500 hover:text-gray-900"
                   }`}
                 >
                   <Rss size={13} />
-                  <span>Live News RSS</span>
+                  <span>Live Google News RSS</span>
                 </button>
                 <button
                   onClick={() => { setIngestTab("upload"); setIngestSuccessMsg(null); }}
-                  className={`py-3 px-3.5 border-b-2 flex items-center space-x-1.5 shrink-0 ${
+                  className={`py-3 px-4 border-b-2 flex items-center space-x-1.5 ${
                     ingestTab === "upload" ? "border-[#FF6200] text-[#FF6200]" : "border-transparent text-gray-500 hover:text-gray-900"
                   }`}
                 >
                   <UploadCloud size={13} />
-                  <span>Houseviews (Upload PDF / PPTX)</span>
+                  <span>Upload PDF / PPTX</span>
                 </button>
                 <button
-                  onClick={() => { setIngestTab("touchpoint"); setIngestSuccessMsg(null); }}
-                  className={`py-3 px-3.5 border-b-2 flex items-center space-x-1.5 shrink-0 ${
-                    ingestTab === "touchpoint" || ingestTab === "preset" ? "border-[#FF6200] text-[#FF6200]" : "border-transparent text-gray-500 hover:text-gray-900"
+                  onClick={() => { setIngestTab("preset"); setIngestSuccessMsg(null); }}
+                  className={`py-3 px-4 border-b-2 flex items-center space-x-1.5 ${
+                    ingestTab === "preset" ? "border-[#FF6200] text-[#FF6200]" : "border-transparent text-gray-500 hover:text-gray-900"
                   }`}
                 >
-                  <Mail size={13} />
-                  <span>Treasury Email & Teams</span>
-                </button>
-                <button
-                  onClick={() => { setIngestTab("context_fabric"); setIngestSuccessMsg(null); }}
-                  className={`py-3 px-3.5 border-b-2 flex items-center space-x-1.5 shrink-0 ${
-                    ingestTab === "context_fabric" ? "border-[#000066] text-[#000066] font-bold" : "border-transparent text-gray-500 hover:text-gray-900"
-                  }`}
-                >
-                  <span className="text-sm">🧠</span>
-                  <span>WorkFabric Context Memo</span>
+                  <FileText size={13} />
+                  <span>Treasury Email / Teams / Context Fabric</span>
                 </button>
               </div>
 
@@ -1931,191 +1915,54 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Treasury Email & Teams Tab */}
-                {(ingestTab === "touchpoint" || ingestTab === "preset") && (
+                {/* Presets Tab */}
+                {ingestTab === "preset" && (
                   <div className="space-y-4">
-                    <p className="text-gray-600 font-medium">
-                      Simulate direct inbound client communications or internal desk transcripts:
-                    </p>
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => setCustomTextContent("TREASURY EMAIL:\nFrom: CFO Treasury <treasury@" + (ingestClient.name.toLowerCase().includes("enel") ? "enel.com" : "basf.com") + ">\nTo: Wholesale Coverage Director\nSubject: 2026/2027 Rollover & Pre-Hedging Request\n\nWe are reviewing upcoming debt maturities. Given 5Y EUR swap easing, we want to evaluate an indicative €800M benchmark issuance combined with an ISDA pre-hedge overlay.")}
-                        className="flex-1 p-2.5 rounded-lg border border-gray-200 bg-[#F8F9FA] hover:border-[#FF6200] text-left transition shadow-2xs"
+                        onClick={() => setCustomTextContent("TREASURY EMAIL:\nFrom: CFO Treasury <treasury@enel.com>\nTo: Sarah Bover <sarah.bover@ing.com>\nSubject: 2026/2027 Rollover & IRS Pre-Hedging Window\n\nHi Sarah,\nWe are reviewing our €3.0B 2026 maturity tranches. Given current 5Y EUR swap easing at 2.62%, we are keen to explore an indicative €800M 10Y Senior EMTN benchmark issuance combined with an ISDA pre-hedge swap overlay.")}
+                        className="flex-1 p-2.5 rounded-lg border border-gray-200 bg-[#F8F9FA] hover:border-[#FF6200] text-left transition"
                       >
                         <div className="flex items-center space-x-1.5 font-bold text-gray-900 mb-0.5">
                           <Mail size={13} className="text-[#FF6200]" />
                           <span>Treasury Email Preset</span>
                         </div>
-                        <p className="text-[10px] text-gray-500">Incoming CFO email requesting €800M benchmark quote</p>
+                        <p className="text-[10px] text-gray-500">Simulate incoming CFO email requesting €800M 10Y benchmark</p>
                       </button>
 
                       <button
-                        onClick={() => setCustomTextContent("MS TEAMS TRANSCRIPT:\n[10:14] Giulia Romano (RM): Treasury flagged debt maturity step-up approaching.\n[10:15] Luca Moretti (DCM): Recommend pre-hedging the curve now while credit spreads remain tight.\n[10:16] Rates Desk: Structuring 6Y EMTN benchmark + pre-hedge overlay.")}
-                        className="flex-1 p-2.5 rounded-lg border border-gray-200 bg-[#F8F9FA] hover:border-[#000066] text-left transition shadow-2xs"
+                        onClick={() => setCustomTextContent("MS TEAMS TRANSCRIPT:\n[10:14] Giulia Romano: Enel Treasury flagged €2.5B hybrid maturity step-up approaching in Q4 2026.\n[10:15] Luca Moretti: Recommend pre-hedging the curve now while iTraxx Main is contained at 58 bps.\n[10:16] Sarah Bover: Preparing draft pitchbook with €600M EMTN + €400M swap pre-hedge.")}
+                        className="flex-1 p-2.5 rounded-lg border border-gray-200 bg-[#F8F9FA] hover:border-[#FF6200] text-left transition"
                       >
                         <div className="flex items-center space-x-1.5 font-bold text-gray-900 mb-0.5">
                           <MessageSquare size={13} className="text-[#000066]" />
                           <span>MS Teams Transcript</span>
                         </div>
-                        <p className="text-[10px] text-gray-500">Internal syndicate and coverage working group chat</p>
+                        <p className="text-[10px] text-gray-500">Simulate internal syndicate and coverage team dialogue</p>
                       </button>
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 font-bold mb-1.5 text-xs">Editable Touchpoint Content:</label>
+                      <label className="font-bold text-gray-700 block mb-1">Editable Touchpoint Content:</label>
                       <textarea
+                        rows={5}
                         value={customTextContent}
                         onChange={(e) => setCustomTextContent(e.target.value)}
                         placeholder="Paste meeting notes, email transcript, or raw text..."
-                        rows={5}
-                        className="w-full p-3 border border-gray-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-[#FF6200] focus:border-transparent"
+                        className="w-full border border-gray-300 rounded-lg p-2.5 text-xs font-mono focus:outline-none focus:border-[#FF6200]"
                       />
                     </div>
 
                     <button
-                      onClick={() => handleIngestCustomText("CLIENT_EMAIL", "Client Inbound Touchpoint")}
+                      onClick={() => handleIngestCustomText("Internal Touchpoint", "Meeting / Email Transcript")}
                       disabled={!customTextContent.trim() || ingestingAction}
                       className="w-full bg-[#000066] hover:bg-[#1A224D] text-white font-bold py-2.5 rounded-lg shadow-sm transition disabled:opacity-40"
                     >
-                      {ingestingAction ? "Ingesting & Recalibrating Digital Twin..." : "Ingest Touchpoint & Update Signals"}
+                      {ingestingAction ? "Extracting Signals with LLM..." : "Ingest Touchpoint & Update Signals"}
                     </button>
                   </div>
                 )}
-
-                {/* WorkFabric Context Memo Tab (All 4 Product Families) */}
-                  {ingestTab === "context_fabric" && (
-                    <div className="space-y-4">
-                      <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-base">🧠</span>
-                            <span className="font-extrabold text-[#000066] text-xs uppercase tracking-wider">WorkFabric Context Engine</span>
-                          </div>
-                          <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded border border-blue-200">Systems of Work</span>
-                        </div>
-                        <p className="text-[11px] text-blue-950 mt-1 leading-snug font-medium">
-                          Captures tacit knowledge, origination working notes, and latent opportunities across all 4 product families.
-                        </p>
-                      </div>
-
-                      {/* 4 Product Family Presets (2x2 Grid) */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        {/* 1. DCM Origination Note */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC DCM MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Debt Capital Markets (DCM)
-` +
-                            `Author: Luca Moretti (DCM Origination)
-` +
-                            `Reconciliation: Public materials show recent capital markets access, but capex should not be equated with funding gap. ` +
-                            `Residual 2026-2027 debt maturities remain at sizable volume. Candidate issue: residual funding sequencing and liability management with senior benchmark tranche.`
-                          )}
-                          className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#000066] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>📝</span> DCM Origination Note Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Reconcile CapEx vs. bond issuance to uncover latent funding gap</p>
-                        </button>
-
-                        {/* 2. Latent Pre-Hedge Overlay */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC PRE-HEDGE OVERLAY MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Rate Risk Immunisation & Derivatives
-` +
-                            `Author: Roman Weiss (Rates Structuring)
-` +
-                            `Signal: Executive Committee authorized accelerated debt rollover. Mandate requires EUR 2.0B Senior EMTN benchmark with immediate ` +
-                            `EUR 1.2B 6Y Fixed-to-Floating IRS pre-hedge to capture favorable swap rates ahead of ECB policy cycle.`
-                          )}
-                          className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#000066] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>🎯</span> Latent Pre-Hedge Overlay Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Lock spread savings and interest rate swap overlay ahead of rate cycle</p>
-                        </button>
-
-                        {/* 3. Sustainable Finance Framework */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC SUSTAINABLE FINANCE MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Green & Sustainability-Linked Structuring
-` +
-                            `Author: Marta Nowak (ESG Structuring Lead)
-` +
-                            `Framework: Verified ICMA Green Bond Principles & EU Taxonomy alignment. Ring-fenced €1.5B eligible clean energy asset pool. ` +
-                            `Recommended structure: Inaugural €750M 8Y Green EMTN with 3-7 bps new issue greenium advantage.`
-                          )}
-                          className="p-2.5 rounded-lg border border-emerald-200 bg-white hover:border-emerald-600 hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-emerald-800 text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>🌿</span> Sustainable Finance Mandate Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Structure Green/SLB framework with SPO verification & greenium pricing</p>
-                        </button>
-
-                        {/* 4. Strategic FX Architecture */}
-                        <button
-                          onClick={() => setCustomTextContent(
-                            `WORKFABRIC FX RISK ARCHITECTURE MEMO:
-` +
-                            `Client: ${ingestClient.name}
-` +
-                            `Product: Strategic FX Architecture & Hedging
-` +
-                            `Author: Sector FX Specialist Desk
-` +
-                            `Exposure: Addressing unhedged USD commercial revenue expansion. Recommend multi-tenor layered corridors with ` +
-                            `rolling 12M–24M zero-cost participating collars protecting group gross operating margin.`
-                          )}
-                          className="p-2.5 rounded-lg border border-amber-200 bg-white hover:border-[#FF6200] hover:shadow-xs text-left transition group"
-                        >
-                          <div className="font-bold text-[#FF6200] text-xs flex items-center gap-1.5 mb-0.5">
-                            <span>💱</span> Strategic FX Corridor Note Preset
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-tight">Layered participating FX collars protecting group EBITDA margin</p>
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 font-bold mb-1.5 text-xs">WorkFabric Context Memo Content:</label>
-                        <textarea
-                          value={customTextContent}
-                          onChange={(e) => setCustomTextContent(e.target.value)}
-                          placeholder="Enter structured WorkFabric memo, tacit desk note, or latent opportunity synthesis..."
-                          rows={4}
-                          className="w-full p-3 border border-blue-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-[#000066] focus:border-transparent bg-[#FAFCFF]"
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => handleIngestCustomText("CONTEXT_FABRIC", `WorkFabric Context Engine (${ingestClient.name})`)}
-                        disabled={!customTextContent.trim() || ingestingAction}
-                        className="w-full bg-[#000066] hover:bg-[#1A224D] text-white font-bold py-2.5 rounded-lg shadow-sm transition disabled:opacity-40 flex items-center justify-center space-x-1.5"
-                      >
-                        {ingestingAction ? (
-                          <span>Ingesting to Context Fabric & Updating Twin...</span>
-                        ) : (
-                          <>
-                            <span>🧠 Ingest to WorkFabric & Recalibrate Digital Twin</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </div>
+              </div>
             </div>
           </div>
         )}

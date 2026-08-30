@@ -428,78 +428,21 @@ def get_opportunities():
                 else:
                     chips.append("Active balance sheet review")
 
-                # Fetch Segment 3 Context Fabric Signals
-                cf_desc = ""
-                cf_latent = ""
-                try:
-                    cur.execute("""
-                        SELECT description, trigger_summary 
-                        FROM ca.digital_twin_signals 
-                        WHERE client_id = %s OR client_id LIKE %s 
-                        ORDER BY signal_id DESC LIMIT 1;
-                    """, (cid_str, f"{cid_str}%"))
-                    sig_row = cur.fetchone()
-                    if sig_row:
-                        cf_desc = sig_row[0] or ""
-                        cf_latent = sig_row[1] or ""
-                except Exception:
-                    pass
-
-                # Fetch Ingestion Badges & Attribution Author
-                channels = []
-                attrib_author = "Internal Dossier & Working Notes"
-                try:
-                    cur.execute("""
-                        SELECT DISTINCT source_channel 
-                        FROM ca.document_vector_chunks 
-                        WHERE client_id = %s OR client_id LIKE %s;
-                    """, (cid_str, f"{cid_str}%"))
-                    ch_rows = cur.fetchall()
-                    if ch_rows:
-                        channels = [r[0] for r in ch_rows if r[0]]
-                    
-                    cur.execute("""
-                        SELECT source_name 
-                        FROM ca.document_vector_chunks 
-                        WHERE (client_id = %s OR client_id LIKE %s) AND source_name IS NOT NULL 
-                        LIMIT 1;
-                    """, (cid_str, f"{cid_str}%"))
-                    auth_row = cur.fetchone()
-                    if auth_row and auth_row[0]:
-                        attrib_author = auth_row[0]
-                except Exception:
-                    pass
-
-                if not channels:
-                    channels = ["NEWS_RSS", "ANALYST_NOTE"]
-
-                if not cf_desc:
-                    cf_desc = f"{name_str} capital structure monitoring active. Balance sheet refinancing and rates hedge analysis prepared."
-                if not cf_latent:
-                    cf_latent = f"Pre-hedge interest rate swap window and bond issuance advisory."
-
                 opps.append({
                     "id": cid_str,
                     "name": name_str,
                     "type": opp_type,
                     "is_debt": float(m24) > 0 or total_nominal > 0 or "DEBT" in opp_type.upper(),
                     "subtitle": f"{tier or 'Tier 1'} client ({hq or sector})",
-                    "tier": tier or "Tier 1",
                     "score": score_val,
                     "score_num": int(score_num),
                     "chips": chips,
                     "callout": f"{why_now} {action}".strip(),
-                    "why_now": why_now or "Active market rates dynamics and corporate funding schedule.",
-                    "action": action or "Proactive balance sheet advisory and fixed-to-floating rates review.",
-                    "cf_description": cf_desc,
-                    "cf_latent": cf_latent,
-                    "ingestion_channels": channels,
-                    "attribution_author": attrib_author,
                     "slides_count": 10,
                     "net_debt_str": f"€{float(net_debt):,.0f}M" if float(net_debt) > 0 else "—",
                     "liquidity_str": f"€{float(liq):,.0f}M" if float(liq) > 0 else "—",
                     "debt_maturing_24m_str": f"€{float(m24):,.0f}M" if float(m24) > 0 else "—",
-                    "rm_name": rm or "Coverage Director"
+                    "rm_name": rm
                 })
 
             cur.close()
@@ -1008,209 +951,49 @@ You must ALWAYS return a single valid JSON object with exactly two keys: "reply"
 NEVER output raw markdown code fences around the JSON; return pure valid JSON."""
 
     # Build complete active slide context for full preview parity
-    # Build dynamic 10-slide context with 100% database-driven values
-    is_green = (p_family == "GREEN_ESG")
-    is_fx = (p_family == "FX_HEDGE")
-    is_rates = (p_family == "RATES_HEDGE")
-
-    # Dynamic metrics from DB bundle & overrides
-    db_wall_str = current_ov.get("maturity_wall_str") or bundle.get("debt_maturing_24m_str") or (f"€{bundle.get('debt_maturing_24m', 0):,.0f}M" if bundle.get('debt_maturing_24m') else "N/A")
-    db_net_debt = current_ov.get("net_debt_str") or bundle.get("net_debt_str") or (f"€{bundle.get('net_debt', 0):,.0f}M" if bundle.get('net_debt') else "N/A")
-    db_liq = current_ov.get("liquidity_str") or bundle.get("liquidity_str") or (f"€{bundle.get('liquidity', 0):,.0f}M" if bundle.get('liquidity') else "N/A")
-    db_rev = current_ov.get("revenue_str") or bundle.get("revenue_str") or (f"€{bundle.get('revenue_eur_m', 0):,.0f}M" if bundle.get('revenue_eur_m') else "N/A")
-    db_ebitda = current_ov.get("ebitda_str") or bundle.get("ebitda_str") or (f"€{bundle.get('ebitda_eur_m', 0):,.0f}M" if bundle.get('ebitda_eur_m') else "N/A")
-    db_rating = current_ov.get("tier") or bundle.get("tier") or bundle.get("credit_rating") or "Tier 1 (Investment Grade)"
-    db_notional = current_ov.get("notional_bond") or bundle.get("notional_bond") or "EUR 600,000,000"
-    db_swap_notional = current_ov.get("notional_swap") or bundle.get("notional_swap") or "EUR 400,000,000"
-    db_tenor = current_ov.get("tenor") or bundle.get("tenor") or "7 Years (T + 7Y)"
-    db_spread = current_ov.get("spread") or bundle.get("indicative_spread") or "Mid-Swap + 82 bps"
-
-    # Slide 1: Cover
-    s1_kicker = current_ov.get("kicker") or bundle.get("kicker") or (
-        "SUSTAINABLE & ESG CAPITAL STRUCTURING" if is_green else
-        "FX & COMMODITY RISK ADVISORY" if is_fx else
-        "RATES RISK & LIABILITY MANAGEMENT" if is_rates else "DCM CAPITAL STRUCTURING"
-    )
-    s1_subtitle = current_ov.get("subtitle") or bundle.get("subtitle") or bundle.get("next_best_action") or "Strategic Optimization Mandate"
-
-    # Slide 2: Strategic Catalyst
-    s2_title = (
-        "ESG Capital Strategy & Decarbonization Catalyst" if is_green else
-        "Currency Exposure & Market Catalyst" if is_fx else
-        "Rate Path Volatility & IRS Pre-Hedge Catalyst" if is_rates else "Executive Context & Opportunity Rationale"
-    )
-    s2_trigger = current_ov.get("trigger") or bundle.get("why_now_nlg") or (
-        f"Upcoming {db_wall_str} debt maturities face repricing risk amid benchmark curve fluctuations." if db_wall_str != "N/A" else
-        "Balance sheet optimization and refinancing window identified."
-    )
-    s2_window = current_ov.get("window") or f"Current 5Y EUR swap easing at {bundle.get('swap_5y', '2.62%')} provides attractive entry window."
-    s2_action = current_ov.get("action") or bundle.get("next_best_action") or f"Execute {db_notional} capital markets financing program."
-
-    # Slide 3: Executive Summary
-    s3_title = "Executive Summary"
-    s3_focus = (
-        "Sustainable Finance Framework" if is_green else
-        "Strategic FX Architecture" if is_fx else
-        "Rate Risk Immunisation" if is_rates else "Proactive Capital Structuring"
-    )
-
-    # Slide 4: Balance Sheet Foundation
-    s4_title = (
-        "Balance Sheet Capacity & Green CapEx Profile" if is_green else
-        "Corporate Liquidity & Currency Inflow Profile" if is_fx else
-        "Capital Structure & Liquidity Snapshot" if is_rates else "Capital Structure & Treasury Health Profile"
-    )
-    s4_card3_label = "Eligible Green CapEx" if is_green else ("Unhedged FX Gap" if is_fx else "24M Maturity Wall")
-    s4_card3_val = current_ov.get("unhedged_gap_str") or db_wall_str
-
-    # Slide 5: Debt & Swap Horizon / Use of Proceeds / FX Gap
-    s5_title = (
-        "Eligible Green Asset Pool & Use of Proceeds" if is_green else
-        "FX Currency Breakdown & Hedging Gap" if is_fx else
-        "Debt Maturity Profile & Swap Refinancing Horizon" if is_rates else "Debt Maturity Profile & Refinancing Horizon"
-    )
-    
-    # Format maturities dynamically from SQL rows
-    if maturities_data and len(maturities_data) > 0:
-        mat_summary = " | ".join([f"{m.get('maturity_year') or m.get('year')}: €{m.get('amount_eur_m') or m.get('amount')}M ({m.get('instrument_type') or m.get('description') or 'Debt'})" for m in maturities_data[:4]])
-    else:
-        mat_summary = f"Total 24M Maturity Wall: {db_wall_str}"
-
-    s5_breakdown = mat_summary
-    s5_overlay_sizing = bundle.get("next_best_action") or "Proactive capital structuring and benchmark roadshows ensure optimal tenor extension."
-
-    # Slide 6: Strategic Rationale & Scenario Analysis
-    s6_title = (
-        "Rationale of our Proposal & Greenium Advantage" if is_green else
-        "Rationale of our Proposal & FX Corridor Analysis" if is_fx else
-        "Rationale of our Proposal & Rate Sensitivity" if is_rates else "Rationale of our Proposal & Refinancing Analysis"
-    )
-    s6_refi_pct = current_ov.get("refi_bond_pct", 60)
-    s6_prehedge_pct = current_ov.get("prehedge_swap_pct", 40)
-    s6_locked_rate = current_ov.get("rate_scenario_lock", "3.44% (locked)")
-    s6_rates_up = current_ov.get("rate_scenario_up", "4.44%")
-    s6_rates_down = current_ov.get("rate_scenario_down", "2.94%")
-
-    # Slide 7: Market Intelligence
-    s7_title = (
-        "ESG Credit Spreads & Green Bond Index Backdrop" if is_green else
-        "Central Bank Differentials & FX Forward Points" if is_fx else
-        "Benchmark Yields & Swap Curve Backdrop" if is_rates else "Benchmark Yields & Credit Spread Backdrop"
-    )
-    s7_metrics = {
-        "swap_5y": current_ov.get("swap_5y") or bundle.get("swap_5y") or "2.62%",
-        "bund_10y": current_ov.get("bund_10y") or bundle.get("bund_10y") or "2.61%",
-        "ecb_refi_rate": current_ov.get("ecb_rate") or "2.25%",
-        "fed_funds_rate": current_ov.get("fed_rate") or "4.00-4.25%",
-        "itraxx_europe_main": current_ov.get("itraxx_main") or bundle.get("itraxx_main") or "58 bps",
-        "green_spread": current_ov.get("green_spread") or "77 bps",
-        "greenium_concession": current_ov.get("greenium_bps") or "-5 bps"
-    }
-
-    # Slide 8: Proposal Features (2-Leg Term Sheet)
-    s8_title = "Proposal features (2-Leg Term Sheet)"
-    s8_leg1 = {
-        "title": ("Leg 1 — Green Bond Tranche" if is_green else "Leg 1 — USD Bond Tranche" if is_fx else "Leg 1 — New Benchmark Bond" if is_rates else "Leg 1 — Senior EMTN Tranche"),
-        "notional": db_notional,
-        "tenor": db_tenor,
-        "benchmark": ("7Y EUR mid-swap" if not is_fx else "7Y US Treasury / SOFR"),
-        "spread": db_spread,
-        "documentation": ("Green Bond Framework / EMTN Prospectus" if is_green else "144A / Reg S Prospectus" if is_fx else "EMTN Programme / Prospectus")
-    }
-    s8_leg2 = {
-        "title": ("Leg 2 — Sustainability Overlay" if is_green else "Leg 2 — Cross-Currency Swap" if is_fx else "Leg 2 — Pre-Hedge Swap" if is_rates else "Leg 2 — Liquidity RCF / CP"),
-        "notional": db_swap_notional,
-        "tenor": ("Annual SPT verification window" if is_green else f"Matches bond maturity ({db_tenor})" if is_fx else "Terminates at bond pricing" if is_rates else "3–5 Years Revolving"),
-        "spread": ("+/- 5 bps SPT step-up/down" if is_green else "EURIBOR + 32 bps" if is_fx else "Current swap rate" if is_rates else "EURIBOR + 45 bps"),
-        "documentation": ("ICMA Green Bond Principles + SPO" if is_green else "ISDA Master Agreement + CSA" if (is_fx or is_rates) else "LMA Standard Facility Agreement")
-    }
-
-    # Slide 9: Execution Roadmap
-    s9_title = (
-        "Green Bond Framework & Issuance Timetable" if is_green else
-        "Layered Roll Framework & Desk Execution" if is_fx else
-        "ISDA Schedule, CSA & Execution Timeline" if is_rates else "Roadmap & Syndicate Timeline"
-    )
-
-    # Slide 10: Regulatory Disclosures
-    s10_title = (
-        "ICMA Green Bond Principles & Target Market Notice" if is_green else
-        "Target Market Notice & EMIR Derivative Disclosures" if (is_fx or is_rates) else "Regulatory Notices & Target Market Classification"
-    )
-
     slide_context = {
         "slide_1_cover": {
-            "slide_number": 1,
-            "title": "Cover Slide",
-            "kicker": s1_kicker,
             "client_name": client_name,
-            "subtitle": s1_subtitle,
-            "prepared_by": current_ov.get("rm_name") or bundle.get("rm_name") or "Coverage RM"
+            "kicker": current_ov.get("kicker") or bundle.get("kicker") or "RATES RISK & LIABILITY MANAGEMENT",
+            "subtitle": current_ov.get("subtitle") or bundle.get("subtitle") or "Pre-Hedging & Refinancing Optimization Strategy",
+            "rm_name": current_ov.get("rm_name") or bundle.get("rm_name") or "G. Romano",
+            "market_date": current_ov.get("market_date") or bundle.get("market_date") or "28 August 2026"
         },
         "slide_2_catalyst": {
-            "slide_number": 2,
-            "title": s2_title,
-            "primary_market_trigger": s2_trigger,
-            "window_of_opportunity": s2_window,
-            "recommended_action": s2_action
+            "slide_title": "Rate Path Volatility & IRS Pre-Hedge Catalyst",
+            "primary_market_trigger": current_ov.get("trigger") or bundle.get("trigger") or "Upcoming €3.2B debt maturities face repricing risk amid benchmark curve fluctuations.",
+            "window_of_opportunity": current_ov.get("window") or bundle.get("window") or f"Current 5Y EUR swap easing at {bundle.get('swap_5y', '2.62%')} provides attractive entry window for forward-starting IRS.",
+            "recommended_action": current_ov.get("action") or bundle.get("action") or f"Execute {bundle.get('notional_bond', '€400M')} pre-hedge IRS overlay to lock in current base yield before debt issuance."
         },
-        "slide_3_exec_summary": {
-            "slide_number": 3,
-            "title": s3_title,
-            "focus_area": s3_focus,
-            "summary_points": f"Tailored architecture for {client_name} based on group treasury requirements."
+        "slide_6_sensitivity_analysis": {
+            "slide_title": "Rationale of our Proposal & Rate Sensitivity",
+            "refinance_percentage": f"{current_ov.get('refi_bond_pct', bundle.get('refi_bond_pct', 60))}%",
+            "prehedge_percentage": f"{current_ov.get('prehedge_swap_pct', bundle.get('prehedge_swap_pct', 40))}%",
+            "indicative_spread": current_ov.get("spread", bundle.get("indicative_spread", "Mid-Swap + 82 bps")),
+            "locked_rate": current_ov.get("rate_scenario_lock", "3.44% (locked)"),
+            "rates_up_100bp": current_ov.get("rate_scenario_up", "4.44%"),
+            "rates_unchanged": current_ov.get("rate_scenario_unchanged", "3.44%"),
+            "rates_down_50bp": current_ov.get("rate_scenario_down", "2.94%")
         },
-        "slide_4_balance_sheet": {
-            "slide_number": 4,
-            "title": s4_title,
-            "net_debt": db_net_debt,
-            "liquidity": db_liq,
-            "third_metric": f"{s4_card3_label}: {s4_card3_val}",
-            "credit_rating": db_rating,
-            "annual_revenue": db_rev,
-            "annual_ebitda": db_ebitda
+        "slide_4_financial_snapshot": {
+            "revenue": current_ov.get("revenue_str") or bundle.get("revenue_str") or "€65,000M",
+            "ebitda": current_ov.get("ebitda_str") or bundle.get("ebitda_str") or "€14,300M",
+            "net_debt": current_ov.get("net_debt_str") or bundle.get("net_debt_str") or "€16,200M",
+            "liquidity": current_ov.get("liquidity_str") or bundle.get("liquidity_str") or "€7,800M",
+            "maturity_wall_24m": current_ov.get("maturity_wall_str") or current_ov.get("debt_maturing_24m_str") or bundle.get("debt_maturing_24m_str") or "€3,000M"
         },
-        "slide_5_debt_and_swap_horizon": {
-            "slide_number": 5,
-            "title": s5_title,
-            "breakdown_data": s5_breakdown,
-            "strategy_and_sizing": s5_overlay_sizing,
-            "total_24m_wall_or_gap": s4_card3_val
-        },
-        "slide_6_sensitivity_and_rationale": {
-            "slide_number": 6,
-            "title": s6_title,
-            "refinance_percentage": f"{s6_refi_pct}%",
-            "prehedge_percentage": f"{s6_prehedge_pct}%",
-            "rate_lock": s6_locked_rate,
-            "rates_up_100bp": s6_rates_up,
-            "rates_down_50bp": s6_rates_down
-        },
-        "slide_7_market_intelligence": {
-            "slide_number": 7,
-            "title": s7_title,
-            "market_metrics": s7_metrics
+        "slide_7_macro_backdrop": {
+            "swap_5y": current_ov.get("swap_5y") or bundle.get("swap_5y") or "2.62%",
+            "bund_10y": current_ov.get("bund_10y") or bundle.get("bund_10y") or "2.61%",
+            "itraxx_main": current_ov.get("itraxx_main") or bundle.get("itraxx_main") or "58 bps"
         },
         "slide_8_term_sheet": {
-            "slide_number": 8,
-            "title": s8_title,
-            "leg_1_details": s8_leg1,
-            "leg_2_details": s8_leg2
-        },
-        "slide_9_execution_roadmap": {
-            "slide_number": 9,
-            "title": s9_title,
-            "phases": ["T - 4 Weeks: Sizing & Preparation", "T - 2 Weeks: Pre-Hedge Execution / SPO Verification", "T - 1 Week: Investor Roadshow", "T-Day: Syndicate Pricing & Settlement"]
-        },
-        "slide_10_regulatory_disclosures": {
-            "slide_number": 10,
-            "title": s10_title,
-            "disclaimers": current_ov.get("disclaimers") or [
-                "Strictly confidential. Indicative terms for professional counterparties only under MiFID II.",
-                "Non-independent investment research pursuant to MiFID II."
-            ]
+            "notional": current_ov.get("notional_bond") or bundle.get("notional_bond") or "EUR 600,000,000",
+            "spread": current_ov.get("spread") or bundle.get("spread") or "Mid-Swap + 82 bps",
+            "tenor": current_ov.get("tenor") or bundle.get("tenor") or "7 Years (Euro Benchmark)"
         }
     }
+
     user_payload = {
         "client_profile": {
             "client_id": cid,

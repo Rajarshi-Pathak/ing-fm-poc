@@ -2,9 +2,6 @@
 
 set -u
 
-# =============================================================================
-# Configuration Defaults (Override via environment variables if desired)
-# =============================================================================
 PROJECT_ID="teach-telecom-ai-sandbox"
 REGION_ID="${REGION:-europe-west1}"
 SQL_INSTANCE_ID="${SQL_INSTANCE:-ing-postgres-db}"
@@ -17,144 +14,88 @@ echo " Cloud Shell Session Initialization"
 echo "============================================================"
 echo
 
-# ------------------------------------------------------------------
-# 1. Check & Auto-Detect GCP Authentication
-# ------------------------------------------------------------------
+# 1. GCP Authentication
 echo "[1/7] Checking GCP authentication..."
-
-# Auto-detect currently active gcloud account if not explicitly set
-DETECTED_ACCOUNT="$(gcloud config get-value account 2>/dev/null)"
-ACCOUNT_ID="${ACCOUNT_ID:-$DETECTED_ACCOUNT}"
-
 if ! gcloud auth print-access-token >/dev/null 2>&1; then
-    echo
-    echo "GCP credentials unavailable or expired."
-    if [ -n "$ACCOUNT_ID" ]; then
-        echo "Starting authentication for: $ACCOUNT_ID"
-        gcloud auth login "$ACCOUNT_ID"
-    else
-        echo "Starting standard GCP authentication..."
-        gcloud auth login
-    fi
-
-    if ! gcloud auth print-access-token >/dev/null 2>&1; then
-        echo
-        echo "ERROR: GCP authentication failed."
-        echo "Run: gcloud auth login"
-        echo
-        return 1 2>/dev/null || exit 1
-    fi
+    gcloud auth login
 fi
 
-# Refresh detected account post-auth
-ACCOUNT_ID="$(gcloud config get-value account 2>/dev/null)"
-
-# ------------------------------------------------------------------
-# 2. Set Active GCP Account
-# ------------------------------------------------------------------
-echo "[2/7] Confirming active GCP account ($ACCOUNT_ID)..."
-if [ -n "$ACCOUNT_ID" ]; then
-    gcloud config set account "$ACCOUNT_ID" >/dev/null 2>&1
-fi
-
-# ------------------------------------------------------------------
-# 3. Select Project
-# ------------------------------------------------------------------
-echo "[3/7] Selecting GCP project ($PROJECT_ID)..."
+# 2. Set Project & Region
+echo "[2/7] Configuring GCP project and region..."
 gcloud config set project "$PROJECT_ID" >/dev/null
-
-# ------------------------------------------------------------------
-# 4. Select Cloud Run Region
-# ------------------------------------------------------------------
-echo "[4/7] Selecting Cloud Run region ($REGION_ID)..."
 gcloud config set run/region "$REGION_ID" >/dev/null
-
-# ------------------------------------------------------------------
-# 5. Restore Session Environment Variables
-# ------------------------------------------------------------------
-echo "[5/7] Restoring environment variables..."
 
 export GCP_PROJECT="$PROJECT_ID"
 export REGION="$REGION_ID"
 export SQL_INSTANCE="$SQL_INSTANCE_ID"
+export DB_USER="postgres"
+export DB_NAME="postgres"
 
-export DB_USER="${DB_USER:-postgres}"
-export DB_NAME="${DB_NAME:-postgres}"
+# 3. Auto-Retrieve DB Password (No manual typing required)
+echo "[3/7] Loading database credentials..."
+RETRIEVED_PASS="$(gcloud secrets versions access latest --secret="db-postgres-pass" --project="$PROJECT_ID" 2>/dev/null)"
 
-if [ -z "${DB_PASS:-}" ]; then
-    echo
+if [ -n "$RETRIEVED_PASS" ]; then
+    export DB_PASS="$RETRIEVED_PASS"
+    echo "  ✓ DB_PASS auto-loaded from Secret Manager."
+elif [ -z "${DB_PASS:-}" ]; then
     read -rsp "Enter DB_PASS: " DB_PASS
     echo
     export DB_PASS
 fi
 
-# ------------------------------------------------------------------
-# 6. Retrieve Persistent GCP Resource Identifiers
-# ------------------------------------------------------------------
-echo "[6/7] Retrieving Cloud SQL and Cloud Run identifiers..."
+# 4. Retrieve Resource Identifiers
+echo "[4/7] Retrieving Cloud SQL connection string..."
+INSTANCE_CONN_RESULT="$(gcloud sql instances describe "$SQL_INSTANCE" --project="$GCP_PROJECT" --format="value(connectionName)" 2>/dev/null)"
 
-INSTANCE_CONN_RESULT="$(
-    gcloud sql instances describe "$SQL_INSTANCE" \
-        --project="$GCP_PROJECT" \
-        --format="value(connectionName)" 2>/dev/null
-)"
+export INSTANCE_CONN="$INSTANCE_CONN_RESULT"
+export INSTANCE_CONNECTION_NAME="$INSTANCE_CONN_RESULT"
+export SQL_CONN="$INSTANCE_CONN_RESULT"
 
-if [ -z "$INSTANCE_CONN_RESULT" ]; then
-    echo
-    echo "WARNING: Could not retrieve Cloud SQL connection name for '$SQL_INSTANCE'."
-    echo "Verify database instance name and project permissions."
-    export INSTANCE_CONN=""
-    export INSTANCE_CONNECTION_NAME=""
+# 5. Retrieve Cloud Run URL
+SERVICE_URL_RESULT="$(gcloud run services describe "$CLOUD_RUN_SERVICE" --project="$GCP_PROJECT" --region="$REGION" --format="value(status.url)" 2>/dev/null)"
+export SERVICE_URL="${SERVICE_URL_RESULT:-}"
+
+# 6. Auto-Start Cloud SQL Auth Proxy Daemon on Port 5432
+echo "[5/7] Checking local Cloud SQL Auth Proxy daemon..."
+mkdir -p "$HOME/bin"
+if [ ! -f "$HOME/bin/cloud-sql-proxy" ]; then
+    echo "  Downloading cloud-sql-proxy..."
+    curl -s -o "$HOME/bin/cloud-sql-proxy" https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.0/cloud-sql-proxy.linux.amd64
+    chmod +x "$HOME/bin/cloud-sql-proxy"
+fi
+
+if ! pgrep -f "cloud-sql-proxy" >/dev/null 2>&1; then
+    if [ -n "$INSTANCE_CONN" ]; then
+        "$HOME/bin/cloud-sql-proxy" --port 5432 "$INSTANCE_CONN" > /tmp/proxy.log 2>&1 &
+        sleep 1.5
+        echo "  ✓ Cloud SQL Auth Proxy started on 127.0.0.1:5432 (PID: $!)."
+    fi
 else
-    export INSTANCE_CONN="$INSTANCE_CONN_RESULT"
-    export INSTANCE_CONNECTION_NAME="$INSTANCE_CONN_RESULT"
+    echo "  ✓ Cloud SQL Auth Proxy is already active."
 fi
 
-SERVICE_URL_RESULT="$(
-    gcloud run services describe "$CLOUD_RUN_SERVICE" \
-        --project="$GCP_PROJECT" \
-        --region="$REGION" \
-        --format="value(status.url)" \
-        2>/dev/null
-)"
+# 7. Verification Summary
+echo "[6/7] Verifying database connectivity..."
+python3 - << 'PYEOF' 2>/dev/null
+import os, pg8000.native
+try:
+    conn = pg8000.native.Connection(
+        user=os.environ.get("DB_USER", "postgres"),
+        password=os.environ.get("DB_PASS", ""),
+        host="127.0.0.1",
+        port=5432,
+        database=os.environ.get("DB_NAME", "postgres")
+    )
+    print("  ✓ Database connection test: SUCCESSFUL")
+    conn.close()
+except Exception as e:
+    print(f"  ✗ Database connection test failed: {e}")
+PYEOF
 
-if [ -n "$SERVICE_URL_RESULT" ]; then
-    export SERVICE_URL="$SERVICE_URL_RESULT"
-else
-    export SERVICE_URL=""
-fi
-
-# ------------------------------------------------------------------
-# 7. Display Configuration
-# ------------------------------------------------------------------
-echo "[7/7] Session initialized."
-echo
-
+echo "[7/7] Session initialization complete."
 echo "============================================================"
-echo " Active Configuration"
+echo " Project      : $GCP_PROJECT"
+echo " SQL Conn     : $INSTANCE_CONN"
+echo " Service URL  : ${SERVICE_URL:-NOT DEPLOYED YET}"
 echo "============================================================"
-echo "Account       : $(gcloud config get-value account)"
-echo "Project       : $GCP_PROJECT"
-echo "Region        : $REGION"
-echo "SQL Instance  : $SQL_INSTANCE"
-echo "SQL Conn      : ${INSTANCE_CONN:-NOT AVAILABLE}"
-echo "Cloud Run     : $CLOUD_RUN_SERVICE"
-echo "Service URL   : ${SERVICE_URL:-NOT DEPLOYED YET}"
-echo "DB User       : $DB_USER"
-echo "DB Name       : $DB_NAME"
-echo "============================================================"
-echo
-
-# ------------------------------------------------------------------
-# Cloud SQL Status Check
-# ------------------------------------------------------------------
-if [ -n "$INSTANCE_CONN" ]; then
-    echo "Cloud SQL status:"
-    gcloud sql instances describe "$SQL_INSTANCE" \
-        --project="$GCP_PROJECT" \
-        --format="value(state,settings.activationPolicy)" 2>/dev/null
-fi
-
-echo
-echo "Session initialization complete. Run 'source session-init.sh' whenever starting a new shell."
-echo

@@ -10,7 +10,7 @@ body {
   font-family: 'Newsreader', Georgia, serif;
 }
 
-/* Infinite Marquee Feed */
+/* Smooth, High-Readability Infinite Marquee Feed */
 @keyframes marquee {
   0% {
     transform: translateX(0%);
@@ -23,27 +23,7 @@ body {
 .animate-marquee {
   display: flex;
   width: max-content;
-  animation: marquee 35s linear infinite;
-}
-
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
-
-/* Infinite Marquee Feed */
-@keyframes marquee {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-marquee {
-  display: flex;
-  width: max-content;
-  animation: marquee 35s linear infinite;
+  animation: marquee 85s linear infinite;
 }
 
 .animate-marquee:hover {

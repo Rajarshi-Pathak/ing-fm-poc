@@ -221,3 +221,20 @@ Summary Verification Matrix
 │  PPTX Export          100% Parity            Deterministic python-pptx engine applying active overrides.    │
 │  Compliance           100% Automated         Two-stage MiFID II / FINRA regex and LLM audit engine.         │
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+ca.client_master
+
+ca.ext_company_filings
+
+ca.ca_opportunity_scoring
+
+ca.ext_credit_spreads
+
+ca.mkt_rates_curves
+
+ca.debt_maturity_schedule
+
+ca.ext_deals
+
+ca.digital_twin_signals

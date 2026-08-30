@@ -1,72 +1,3 @@
-import re
-
-def compute_canonical_bundle(ctx, ov=None):
-    """
-    Single mathematical source of truth.
-    Derives all tenors, spreads, rates, tranches, and scenarios from DB + Overrides.
-    """
-    ov = ov or {}
-    
-    # Client Meta
-    rating = ov.get("rating", ctx.get("credit_rating", ctx.get("rating", "BBB+")))
-    raw_wall = ov.get("debt_maturing_24m_str", ov.get("maturity_wall_str", ctx.get("debt_maturing_24m_str")))
-    wall_str = str(raw_wall) if raw_wall and str(raw_wall) != "None" else "€3,000M"
-    
-    # 1. Tenor
-    tenor_raw = str(ov.get("tenor", ctx.get("tenor", "7 Years")))
-    tenor_m = re.search(r"(\d+)", tenor_raw)
-    tenor_years = int(tenor_m.group(1)) if tenor_m else 7
-    tenor_str = f"{tenor_years} Years (T + {tenor_years}Y)"
-    
-    # 2. Spread & Swap Rate
-    spread_raw = ov.get("spread", ctx.get("indicative_spread", "Mid-Swap + 82 bps"))
-    sp_m = re.search(r"(\d+)\s*bps", str(spread_raw), re.IGNORECASE)
-    spread_bps = int(sp_m.group(1)) if sp_m else 82
-    spread_str = f"Mid-Swap + {spread_bps} bps"
-    
-    swap_raw = ov.get("swap_5y", ctx.get("swap_5y", "2.62%"))
-    sw_m = re.search(r"([\d\.]+)", str(swap_raw))
-    swap_val = float(sw_m.group(1)) if sw_m else 2.62
-    
-    # 3. All-In Rate
-    calc_all_in = swap_val + (spread_bps / 100.0)
-    all_in_rate = float(ov.get("indicative_all_in_rate", calc_all_in))
-    all_in_str = f"{all_in_rate:.2f}%"
-    
-    # 4. Tranche Splits
-    refi_pct = int(ov.get("refi_bond_pct", ctx.get("refi_bond_pct", 60)))
-    prehedge_pct = int(ov.get("prehedge_swap_pct", ctx.get("prehedge_swap_pct", 100 - refi_pct)))
-    
-    # 5. ESG & FX Parameters
-    greenium_bps = int(ov.get("greenium_bps", ctx.get("greenium_bps", 5)))
-    floor_val = ov.get("fx_collar_floor", "1.0850")
-    cap_val = ov.get("fx_collar_cap", "1.0450")
-    
-    # 6. Scenarios
-    scen_lock = ov.get("rate_scenario_lock", f"{all_in_str} (locked)")
-    scen_up = ov.get("rate_scenario_up", f"{all_in_rate + 1.00:.2f}%")
-    scen_down = ov.get("rate_scenario_down", f"{all_in_rate - 0.50:.2f}%")
-    
-    return {
-        "rating": rating,
-        "wall_str": wall_str,
-        "tenor_years": tenor_years,
-        "tenor_str": tenor_str,
-        "spread_bps": spread_bps,
-        "spread_str": spread_str,
-        "swap_val": swap_val,
-        "all_in_rate": all_in_rate,
-        "all_in_str": all_in_str,
-        "refi_pct": refi_pct,
-        "prehedge_pct": prehedge_pct,
-        "greenium_bps": greenium_bps,
-        "floor_val": floor_val,
-        "cap_val": cap_val,
-        "scen_lock": scen_lock,
-        "scen_up": scen_up,
-        "scen_down": scen_down
-    }
-
 import io
 import os
 import logging
@@ -1000,16 +931,15 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
         p_desc.space_before = Pt(8)
 
             # =========================================================================
-    # SLIDE 6: SENSITIVITY ANALYSIS & STRATEGIC RATIONALE (100% Data-Grounded)
+    # SLIDE 6: SENSITIVITY ANALYSIS & STRATEGIC RATIONALE (2-Column Layout)
     # =========================================================================
     s6 = prs.slides.add_slide(blank)
-    s6_title = "Rationale of our Proposal & FX Corridor Analysis" if p_fam == "FX_HEDGE" else                "Rationale of our Proposal & Greenium Advantage" if p_fam == "GREEN_ESG" else                "Rationale of our Proposal & Rate Sensitivity"
+    s6_title = "Rationale of our Proposal & FX Corridor Analysis" if p_fam == "FX_HEDGE" else \
+               "Rationale of our Proposal & Greenium Advantage" if p_fam == "GREEN_ESG" else \
+               "Rationale of our Proposal"
     add_header(s6, s6_title, category="STRATEGIC RATIONALE & SCENARIO ANALYSIS")
     add_logo(s6)
     add_footer(s6)
-
-    # Compute canonical parameters
-    calc = compute_canonical_bundle(ctx, ov)
 
     # --- LEFT COLUMN: Scenario & Recommended Structure Box ---
     left_box = s6.shapes.add_textbox(Inches(0.8), Inches(1.5), Inches(5.3), Inches(4.8))
@@ -1028,13 +958,15 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     p_scen_head.font.color.rgb = ING_ORANGE
 
     p_scen_body = tf.add_paragraph()
+    rating = ctx.get("rating", "BBB+")
+    wall = ov.get("maturity_wall_str", ctx.get("debt_maturing_24m_str", "€3,000M"))
     if p_fam == "FX_HEDGE":
         p_scen_body.text = "A corporate treasury with expanding commercial operations in North America has unhedged USD exposures. Fluctuations in EUR/USD spot risk compressing operating margins. Treasury seeks certainty on downside floor while retaining upside participation."
     elif p_fam == "GREEN_ESG":
         p_scen_body.text = "A leading corporate issuer is evaluating its inaugural sustainable finance framework. Dedicated ESG funds offer pricing tension. Treasury seeks to capture the 3-5 bps greenium benefit while establishing market leadership in EU taxonomy alignment."
     else:
-        p_scen_body.text = f"A {calc['rating']} rated issuer has a {calc['wall_str']} debt maturity wall upcoming. Current swap-plus-spread levels imply higher refinancing costs. Treasury wants to lock in funding cost ahead of maturity while managing execution risk."
-
+        p_scen_body.text = f"A {rating} rated issuer has a {wall} bond maturing in 9 months, carrying a 1.35% coupon. Current 7-year swap-plus-spread levels imply a materially higher refinancing cost. Treasury wants to lock in funding cost ahead of the maturity while managing execution risk."
+    
     p_scen_body.font.name = "Arial"
     p_scen_body.font.size = Pt(10)
     p_scen_body.font.color.rgb = ING_DARK_SLATE
@@ -1050,23 +982,22 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     p_rec_head.font.color.rgb = ING_ORANGE
     p_rec_head.space_before = Pt(6)
 
+    bullets = [
+        "• 60% refinanced via a new 7-year vanilla bond, indicatively priced at swap + 95bps (≈ 3.60% all-in)",
+        "• 40% pre-hedged via a forward-starting interest rate swap, locking the current 7-year swap rate ahead of launch",
+        "• Staggered approach balances rate-lock certainty with flexibility on final sizing and timing"
+    ]
     if p_fam == "FX_HEDGE":
         bullets = [
-            f"• {calc['refi_pct']}% hedged via layered forward contracts locking core budget rate.",
-            f"• {calc['prehedge_pct']}% structured in zero-cost participating collars ({calc['floor_val']} floor / {calc['cap_val']} cap).",
+            "• 60% hedged via layered forward contracts locking core budget rate.",
+            "• 40% structured in zero-cost participating collars (1.0850 floor / 1.0450 cap).",
             "• Staggered quarterly roll balances certainty with liquidity."
         ]
     elif p_fam == "GREEN_ESG":
         bullets = [
-            f"• {calc['refi_pct']}% Green Benchmark EMTN, capturing ~{calc['greenium_bps']} bps greenium pricing advantage.",
-            f"• {calc['prehedge_pct']}% Sustainability-Linked Tranche tied to verified Scope 1/2 reduction SPTs.",
+            "• 70% Green Benchmark EMTN, capturing 5 bps greenium pricing advantage.",
+            "• 30% Sustainability-Linked Tranche tied to verified Scope 1/2 reduction SPTs.",
             "• Ring-fenced eligible asset pool aligned with ICMA Green Bond Principles."
-        ]
-    else:
-        bullets = [
-            f"• {calc['refi_pct']}% refinanced via a new {calc['tenor_years']}-year vanilla bond, indicatively priced at swap + {calc['spread_bps']}bps (~{calc['all_in_str']} all-in).",
-            f"• {calc['prehedge_pct']}% pre-hedged via forward-starting IRS, locking current benchmark rate.",
-            "• Staggered approach balances rate-lock certainty with sizing flexibility."
         ]
 
     for b_text in bullets:
@@ -1077,46 +1008,26 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
         b_p.font.color.rgb = ING_DARK_SLATE
         b_p.space_before = Pt(4)
 
-    # --- RIGHT COLUMN: Illustrative Scenario Table ---
+    # --- RIGHT COLUMN: Illustrative All-In Cost by Scenario Table ---
+    # Title Box
     r_title_box = s6.shapes.add_textbox(Inches(6.4), Inches(1.5), Inches(6.1), Inches(0.4))
     r_tf = r_title_box.text_frame
     r_p = r_tf.paragraphs[0]
-    r_p.text = "COST COMPARISON VS CONVENTIONAL ISSUANCE" if p_fam == "GREEN_ESG" else ("Illustrative FX Outcome by Scenario" if p_fam == "FX_HEDGE" else "Illustrative All-In Cost by Scenario")
+    r_p.text = "Illustrative All-In Cost by Scenario"
     r_p.alignment = PP_ALIGN.CENTER
     r_p.font.name = "Arial"
     r_p.font.size = Pt(12)
     r_p.font.bold = True
     r_p.font.color.rgb = ING_ORANGE
 
+    # Table Shape
     s6_table_shape = s6.shapes.add_table(4, 3, Inches(6.4), Inches(2.0), Inches(6.1), Inches(2.2))
     s6_tbl = s6_table_shape.table
     s6_tbl.columns[0].width = Inches(2.3)
     s6_tbl.columns[1].width = Inches(1.9)
     s6_tbl.columns[2].width = Inches(1.9)
 
-    if p_fam == "GREEN_ESG":
-        s6_headers = ["Issuance Format", "Indicative Spread", "Annual Savings"]
-        green_spread = calc["spread_bps"] - calc["greenium_bps"]
-        s6_data = [
-            ("Inaugural Green Bond (with Greenium)", f"Mid-Swap + {green_spread} bps (-{calc['greenium_bps']} bps)", "€375,000 / yr"),
-            ("Sustainability-Linked Bond (SLB)", f"Mid-Swap + {calc['spread_bps'] - 2} bps (-2 bps)", "€150,000 / yr"),
-            ("Plain-Vanilla Senior EMTN", f"Mid-Swap + {calc['spread_bps']} bps (Flat)", "Baseline")
-        ]
-    elif p_fam == "FX_HEDGE":
-        s6_headers = ["EUR/USD Scenario", "Unhedged", "Collared"]
-        s6_data = [
-            ("EUR/USD 1.12 (+5%)", fx_up_unhedged, fx_up_hedged),
-            ("EUR/USD 1.065 (Spot)", fx_spot_unhedged, fx_spot_hedged),
-            ("EUR/USD 1.02 (-4%)", fx_down_unhedged, fx_down_hedged)
-        ]
-    else:
-        s6_headers = ["Rate Scenario", "Refinance Today", "Wait 6 months"]
-        s6_data = [
-            ("Rates +100bp", calc["scen_lock"], calc["scen_up"]),
-            ("Unchanged", f"{calc['all_in_str']} (locked)", calc["all_in_str"]),
-            ("Rates -50bp", calc["scen_lock"], calc["scen_down"])
-        ]
-
+    s6_headers = ["Rate Scenario", "Refinance Today", "Wait 6 months"]
     for c_idx, h in enumerate(s6_headers):
         c = s6_tbl.cell(0, c_idx)
         c.fill.solid()
@@ -1130,14 +1041,19 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
         if c_idx > 0:
             p.alignment = PP_ALIGN.CENTER
 
-    for r_idx, (scen, col1, col2) in enumerate(s6_data):
+    s6_data = [
+        ("Rates +100bp", "3.60% (locked)", "4.55%"),
+        ("Unchanged", "3.60% (locked)", "3.60%"),
+        ("Rates -50bp", "3.60% (locked)", "3.15%")
+    ]
+    for r_idx, (scen, ref_today, wait_6m) in enumerate(s6_data):
         row_bg = RGBColor(254, 237, 222) if r_idx % 2 == 0 else RGBColor(255, 255, 255)
-        for c_idx, val in enumerate([scen, col1, col2]):
+        for c_idx, val in enumerate([scen, ref_today, wait_6m]):
             c = s6_tbl.cell(r_idx + 1, c_idx)
             c.fill.solid()
             c.fill.fore_color.rgb = row_bg
             p = c.text_frame.paragraphs[0]
-            p.text = str(val)
+            p.text = val
             p.font.name = "Arial"
             p.font.size = Pt(9.5)
             p.font.color.rgb = ING_DARK_SLATE
@@ -1159,13 +1075,7 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     rp_head.font.color.rgb = ING_ORANGE
 
     rp_body = rtf.add_paragraph()
-    if p_fam == "FX_HEDGE":
-        rp_body.text = f"A zero-cost collar provides a hard floor at {calc['floor_val']} against adverse currency moves while allowing upside participation up to {calc['cap_val']}, eliminating upfront premium expense while protecting operating margin."
-    elif p_fam == "GREEN_ESG":
-        rp_body.text = f"Issuing in Green format attracts dedicated sustainability orderbooks, driving tighter execution pricing (~{calc['greenium_bps']} bps greenium) and expanding investor diversification across European ESG accounts."
-    else:
-        rp_body.text = f"Refinancing today removes exposure to rate rises but forgoes the benefit if rates fall — the pre-hedge on {calc['prehedge_pct']}% of the notional narrows that trade-off versus refinancing the full amount unhedged."
-
+    rp_body.text = "Refinancing today removes exposure to a rate rise but forgoes the benefit if rates fall — the pre-hedge on 40% of the notional narrows that trade-off versus refinancing the full amount unhedged."
     rp_body.font.name = "Arial"
     rp_body.font.size = Pt(9)
     rp_body.font.color.rgb = ING_DARK_SLATE
@@ -1278,32 +1188,17 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     add_logo(s8)
     add_footer(s8)
 
-    calc = compute_canonical_bundle(ctx, ov)
-    t_yrs = calc["tenor_years"]
-
-    nba = ctx.get("next_best_action", "")
-    bm = re.search(r"EUR\s*([\d\.]+)\s*([BM])(?:(?!EUR).)*?EMTN", nba, re.IGNORECASE)
-    hm = re.search(r"EUR\s*([\d\.]+)\s*([BM])(?:(?!EUR).)*?Pre-Hedge", nba, re.IGNORECASE)
-    
-    def_bond = ov.get("notional_bond")
-    def_swap = ov.get("notional_swap")
-    if not def_bond and bm:
-        unit = "B" if bm.group(2).upper() == "B" else "M"
-        def_bond = f"EUR {bm.group(1)}{unit} (Senior Benchmark)"
-    if not def_swap and hm:
-        unit = "B" if hm.group(2).upper() == "B" else "M"
-        def_swap = f"EUR {hm.group(1)}{unit} (Pre-Hedge Overlay)"
-
+    # 1. Dynamic Column Headers & Row Content per Product Family
     if p_fam == "FX_HEDGE":
         leg1_title = "Leg 1 — USD Bond Tranche"
         leg2_title = "Leg 2 — Cross-Currency Swap"
-        notional_leg1 = def_bond or "USD 600,000,000"
-        notional_leg2 = def_swap or "EUR 550,000,000 eq."
-        tenor_leg1 = ov.get("tenor", f"{t_yrs} Years (T + {t_yrs}Y)")
-        tenor_leg2 = f"Matches bond maturity ({t_yrs}Y)"
-        bench_leg1 = f"{t_yrs}Y US Treasury / SOFR"
+        notional_leg1 = ov.get("notional_bond", "USD 600,000,000")
+        notional_leg2 = ov.get("notional_swap", "EUR 550,000,000 eq.")
+        tenor_leg1 = ov.get("tenor", "10 Years (T + 10Y)")
+        tenor_leg2 = "Matches bond maturity (10Y)"
+        bench_leg1 = "10Y US Treasury / SOFR"
         bench_leg2 = "EUR/USD Cross-Currency Basis"
-        spread_leg1 = ov.get("spread", f"SOFR + {calc['spread_bps']} bps (indicative)")
+        spread_leg1 = ov.get("spread", "SOFR + 115 bps (indicative)")
         spread_leg2 = "EURIBOR + 32 bps (synthetic EUR funding)"
         fees_leg1 = "Underwriting fee per mandate letter"
         fees_leg2 = "Nil (embedded in CCY swap rate)"
@@ -1314,13 +1209,13 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     elif p_fam == "GREEN_ESG":
         leg1_title = "Leg 1 — Green Bond Tranche"
         leg2_title = "Leg 2 — Sustainability Overlay"
-        notional_leg1 = def_bond or "EUR 500,000,000"
-        notional_leg2 = def_swap or "EUR 250,000,000"
-        tenor_leg1 = ov.get("tenor", f"{t_yrs} Years (Green Benchmark)")
+        notional_leg1 = ov.get("notional_bond", "EUR 500,000,000")
+        notional_leg2 = ov.get("notional_swap", "EUR 250,000,000")
+        tenor_leg1 = ov.get("tenor", "8 Years (Green Benchmark)")
         tenor_leg2 = "Annual SPT verification window"
-        bench_leg1 = f"{t_yrs}Y EUR mid-swap"
+        bench_leg1 = "8Y EUR mid-swap"
         bench_leg2 = "Scope 1 & 2 Decarbonisation KPI"
-        spread_leg1 = ov.get("spread", f"Mid-swap + {calc['spread_bps'] - calc['greenium_bps']} bps (Greenium: -{calc['greenium_bps']} bps)")
+        spread_leg1 = ov.get("spread", "Mid-swap + 77 bps (Greenium: -5 bps)")
         spread_leg2 = "+/- 5 bps SPT step-up / step-down"
         fees_leg1 = "Underwriting fee per mandate letter"
         fees_leg2 = "Second-Party Opinion (SPO) advisory"
@@ -1331,14 +1226,14 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     elif p_fam == "RATES_HEDGE":
         leg1_title = "Leg 1 — New Benchmark Bond"
         leg2_title = "Leg 2 — Pre-Hedge Swap"
-        notional_leg1 = def_bond or "EUR 1,200,000,000"
-        notional_leg2 = def_swap or "EUR 800,000,000"
-        tenor_leg1 = ov.get("tenor", f"{t_yrs} Years (T + {t_yrs}Y)")
+        notional_leg1 = ov.get("notional_bond", "EUR 300,000,000")
+        notional_leg2 = ov.get("notional_swap", "EUR 200,000,000")
+        tenor_leg1 = ov.get("tenor", "7 years (T + 7Y)")
         tenor_leg2 = "Terminates at bond pricing"
-        bench_leg1 = f"{t_yrs}Y EUR mid-swap"
-        bench_leg2 = f"{t_yrs}Y EUR swap rate"
-        spread_leg1 = ov.get("spread", f"Mid-swap + {calc['spread_bps']} bps (indicative)")
-        spread_leg2 = f"Current {t_yrs}Y swap rate (indicative)"
+        bench_leg1 = "7Y EUR mid-swap"
+        bench_leg2 = "7Y EUR swap rate"
+        spread_leg1 = ov.get("spread", "Mid-swap + 82 bps (indicative)")
+        spread_leg2 = "Current 7Y swap rate (indicative)"
         fees_leg1 = "Underwriting fee per mandate letter"
         fees_leg2 = "Nil (embedded in swap rate)"
         settle_leg1 = "T+5 standard for EUR benchmark bonds"
@@ -1348,40 +1243,45 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     else:  # DCM_REFI
         leg1_title = "Leg 1 — Senior EMTN Tranche"
         leg2_title = "Leg 2 — Liquidity RCF / Commercial Paper"
-        notional_leg1 = def_bond or "EUR 1,200,000,000"
-        notional_leg2 = def_swap or "EUR 800,000,000"
-        tenor_leg1 = ov.get("tenor", f"{t_yrs} Years (Euro Benchmark)")
-        tenor_leg2 = "3–5 Years Revolving"
-        bench_leg1 = f"{t_yrs}Y EUR mid-swap"
-        bench_leg2 = "EURIBOR / €STR"
-        spread_leg1 = ov.get("spread", f"Mid-swap + {calc['spread_bps']} bps (indicative)")
-        spread_leg2 = "EURIBOR + 45 bps (undrawn 15 bps)"
+        notional_leg1 = ov.get("notional_bond", "EUR 500,000,000")
+        notional_leg2 = ov.get("notional_swap", "EUR 250,000,000")
+        tenor_leg1 = ov.get("tenor", "7 Years (Euro Benchmark)")
+        tenor_leg2 = "3 Years (Revolving Credit Facility)"
+        bench_leg1 = "7Y EUR mid-swap"
+        bench_leg2 = "3M EURIBOR"
+        spread_leg1 = ov.get("spread", "Mid-swap + 82 bps (indicative)")
+        spread_leg2 = "EURIBOR + 35 bps margin grid"
         fees_leg1 = "Underwriting fee per mandate letter"
-        fees_leg2 = "Commitment fee per facility agreement"
+        fees_leg2 = "Commitment fee: 35% of margin"
         settle_leg1 = "T+5 standard for EUR benchmark bonds"
-        settle_leg2 = "Available upon documentation execution"
-        doc_leg1 = "EMTN Programme / Prospectus"
-        doc_leg2 = "LMA Standard Facility Agreement"
+        settle_leg2 = "Revolving drawdowns as needed"
+        doc_leg1 = "EMTN Programme / Base Prospectus"
+        doc_leg2 = "LMA Multicurrency Facility Agreement"
 
-    s8_shape = s8.shapes.add_table(9, 3, Inches(0.8), Inches(1.5), Inches(11.7), Inches(4.5))
-    s8_tbl = s8_shape.table
-    s8_tbl.columns[0].width = Inches(2.7)
-    s8_tbl.columns[1].width = Inches(4.5)
-    s8_tbl.columns[2].width = Inches(4.5)
+    # 2. Add 9-row x 3-column Table
+    t_shape = s8.shapes.add_table(9, 3, Inches(0.8), Inches(1.5), Inches(11.7), Inches(4.3))
+    tbl = t_shape.table
+    tbl.columns[0].width = Inches(2.9)
+    tbl.columns[1].width = Inches(4.4)
+    tbl.columns[2].width = Inches(4.4)
 
-    headers = ["Term", leg1_title, leg2_title]
-    for c_idx, h in enumerate(headers):
-        c = s8_tbl.cell(0, c_idx)
+    # 3. Orange Header Row
+    h_titles = ["Term", leg1_title, leg2_title]
+    for c_idx, h_text in enumerate(h_titles):
+        c = tbl.cell(0, c_idx)
         c.fill.solid()
         c.fill.fore_color.rgb = ING_ORANGE
+        c.margin_left = Inches(0.12)
+        c.margin_right = Inches(0.12)
         p = c.text_frame.paragraphs[0]
-        p.text = h
+        p.text = h_text
         p.font.name = "Arial"
-        p.font.size = Pt(11)
+        p.font.size = Pt(10.5)
         p.font.bold = True
         p.font.color.rgb = RGBColor(255, 255, 255)
 
-    s8_rows = [
+    # 4. Table Body
+    ts_2leg_rows = [
         ("Notional", notional_leg1, notional_leg2),
         ("Trade / pricing date", "Indicative — T", "Indicative — T"),
         ("Tenor / maturity", tenor_leg1, tenor_leg2),
@@ -1389,37 +1289,43 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
         ("Spread / rate", spread_leg1, spread_leg2),
         ("Fees", fees_leg1, fees_leg2),
         ("Settlement", settle_leg1, settle_leg2),
-        ("Governing documentation", doc_leg1, doc_leg2),
+        ("Governing documentation", doc_leg1, doc_leg2)
     ]
 
-    for r_idx, (t_name, l1_val, l2_val) in enumerate(s8_rows):
-        row_bg = RGBColor(254, 237, 222) if r_idx % 2 == 0 else RGBColor(255, 255, 255)
-        for c_idx, val in enumerate([t_name, l1_val, l2_val]):
-            c = s8_tbl.cell(r_idx + 1, c_idx)
+    for r_idx, (term_label, l1_val, l2_val) in enumerate(ts_2leg_rows):
+        bg_col = RGBColor(254, 237, 222) if r_idx % 2 == 0 else RGBColor(255, 255, 255)
+        for c_idx, val in enumerate([term_label, l1_val, l2_val]):
+            c = tbl.cell(r_idx + 1, c_idx)
             c.fill.solid()
-            c.fill.fore_color.rgb = row_bg
+            c.fill.fore_color.rgb = bg_col
+            c.margin_left = Inches(0.12)
+            c.margin_right = Inches(0.12)
             p = c.text_frame.paragraphs[0]
             p.text = str(val)
             p.font.name = "Arial"
-            p.font.size = Pt(10)
+            p.font.size = Pt(9.5)
             if c_idx == 0:
                 p.font.bold = True
                 p.font.color.rgb = ING_DARK_SLATE
-            elif c_idx == 1 and r_idx == 4:
+            elif c_idx == 1 and ("Mid-swap" in str(val) or "SOFR" in str(val)):
+                p.font.bold = True
+                p.font.color.rgb = ING_ORANGE
+            elif c_idx == 2 and ("swap rate" in str(val) or "SPT" in str(val) or "EURIBOR" in str(val)):
                 p.font.bold = True
                 p.font.color.rgb = ING_ORANGE
             else:
                 p.font.color.rgb = ING_DARK_SLATE
 
-    # Disclaimer note beneath table
-    d_box = s8.shapes.add_textbox(Inches(0.8), Inches(6.15), Inches(11.7), Inches(0.4))
-    dp = d_box.text_frame.paragraphs[0]
-    dp.text = "Indicative terms for discussion purposes only. Subject to internal credit approvals, KYC/AML, and market conditions at pricing."
+    # 5. Indicative Regulatory Caveat Box
+    disc_shape = s8.shapes.add_textbox(Inches(0.8), Inches(6.0), Inches(11.7), Inches(0.7))
+    dtf = disc_shape.text_frame
+    dtf.word_wrap = True
+    dp = dtf.paragraphs[0]
+    dp.text = "All rates, spreads, and levels above are indicative and for discussion purposes only. They do not constitute an offer and are not binding on the bank or the client. Executable pricing is confirmed at mandate and finalized at bookbuild, subject to prevailing market conditions and rating-agency and credit approval."
     dp.font.name = "Arial"
     dp.font.size = Pt(8.5)
     dp.font.italic = True
     dp.font.color.rgb = RGBColor(100, 116, 139)
-
 
 
     # SLIDE 9: EXECUTION ROADMAP (Exact Preview Parity)

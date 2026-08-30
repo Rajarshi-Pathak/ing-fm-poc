@@ -143,9 +143,9 @@
 │  │  • Analyzes: signals + evidence + 45+ reasoning rules                         │ │
 │  │  • Outputs:                                                                   │ │
 │  │    - catalog_family (primary opportunity)                                     │ │
-│  │    - product (specific solution)                                              │ │
+│  │    - product (specific solution - RATES_HEDGE, DCM_REFI, FX_HEDGE, GREEN_ESG) │ │
 │  │    - score (0-100 priority)                                                   │ │
-│  │    - opportunity_status (Hypothesis|Discovery|Mandate)                       │ │
+│  │    - opportunity_status (Hypothesis|Discovery|Mandate)                        │ │
 │  │    - rationale (evidence-grounded explanation)                                │ │
 │  │    - validation_gap (what's missing)                                          │ │
 │  │    - secondary_opportunities (up to 3)                                        │ │
