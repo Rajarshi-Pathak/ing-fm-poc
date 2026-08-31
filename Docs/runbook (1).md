@@ -6,6 +6,17 @@ This is the only block normally required after a new Cloud Shell session
 cd ~/ing-fm-poc
 source ./session-init.sh
 
+Deployment: user@ing-fm-dev-1:~/ing-fm-poc$ 
+cd ~/ing-fm-poc
+gcloud run deploy ing-fm-poc-service \
+    --source . \
+    --region "$REGION" \
+    --port 8080 \
+    --add-cloudsql-instances "$INSTANCE_CONN" \
+    --set-env-vars INSTANCE_CONNECTION_NAME="$INSTANCE_CONN",DB_USER="$DB_USER",DB_PASS="$DB_PASS",DB_NAME="$DB_NAME",GCP_PROJECT="$GCP_PROJECT",REGION="$REGION" \
+    --clear-base-image \
+    --allow-unauthenticated
+
 Then check:
 
 echo "$GCP_PROJECT"

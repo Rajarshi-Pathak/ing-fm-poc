@@ -142,9 +142,8 @@ class OpportunityRequest(BaseModel):
 class CopilotMessage(BaseModel):
     client_id: str
     prompt: str
-    history: Optional[List[Dict[str, Any]]] = []
+    history: Optional[List[Dict[str, str]]] = []
     current_overrides: Optional[Dict[str, Any]] = None
-    current_slide_index: Optional[int] = 0
 
 
 class ComplianceAuditRequest(BaseModel):
@@ -855,79 +854,103 @@ def check_compliance_endpoint(req: ComplianceAuditRequest):
     bundle["product_family"] = p_family
     ov = req.overrides or {}
     now_stamp = datetime.now().strftime("%d %B %Y, %H:%M CET")
-    is_green = (p_family == "GREEN_ESG")
     is_fx = (p_family == "FX_HEDGE")
-    is_rates = (p_family == "RATES_HEDGE")
 
-    # Dynamic indicative pricing based on product family
+    # Product-appropriate term sheet pricing
     if is_fx:
-        indicative_pricing = ov.get("term_pricing") or "Zero Net Upfront Premium (Zero-Cost Collar 1.0450 - 1.0850)"
-    elif is_green:
-        indicative_pricing = ov.get("spread") or "Mid-Swap + 77 bps (Greenium: -5 bps)"
+        indicative_pricing = ov.get("term_pricing") or ov.get("collar_structure") or "Zero Net Upfront Premium (Zero-Cost Collar corridor 1.0450 - 1.0850)"
     else:
-        indicative_pricing = ov.get("spread") or "Mid-Swap + 82 bps"
+        indicative_pricing = ov.get("term_pricing") or ov.get("spread") or "Mid-Swap + 82 bps"
 
     now_dt = datetime.now()
     current_year = now_dt.year
-
-    # Product-grounded slide audit payload
-    s5_desc = "Eligible Green CapEx Pool (€3.5B Renewables, Grids, Storage)" if is_green else (
-        "FX Exposure & Hedged Corridor ($6-8B unhedged gap)" if is_fx else "24M Debt Maturity Profile"
-    )
 
     audit_payload = {
         "client_name": client_name,
         "product_family": p_family,
         "current_audit_date": now_stamp,
-        "slide_01_cover": f"Cover Title and Branding for {client_name}",
+        "slide_01_cover": "Cover Title and Target Client Branding",
+        "slide_03_exec_summary": "Executive Context & Opportunity Rationale",
         "slide_04_balance_sheet": "Balance Sheet & Liquidity Overview",
-        "slide_05_deal_core": s5_desc,
-        "slide_06_sensitivity": "Greenium / Spread Sensitivity" if is_green else "Scenario Sensitivity",
-        "slide_08_term_sheet": f"Indicative Terms: {indicative_pricing}",
+        "slide_05_debt_maturity_and_fx": "Debt Maturity Profile & Refinancing Horizon (Tranche clustering 2026-2028, FX Policy Sizing & Hedged Ratios)",
+        "slide_06_sensitivity": "Scenario Sensitivity Analysis",
+        "slide_07_execution_roadmap": "Syndicate Execution Timeline",
+        "slide_08_term_sheet": "Indicative Terms: " + indicative_pricing,
         "slide_10_disclaimers": ov.get("disclaimers", [
             "Prepared for illustrative and discussion purposes only; not an offer or solicitation.",
-            "Target market under MiFID II: Eligible counterparties and professional clients only.",
-            "Rates, levels, and spreads are indicative, subject to market conditions, and non-binding."
+            "Target market under MiFID II / UK MiFIR: Eligible counterparties and professional clients only.",
+            "Non-independent investment research disclaimer.",
+            "Rates, levels, and spreads are indicative, subject to change, and not tradeable prices."
         ])
     }
 
-    # Authentic EU Wholesale Regulatory Rules
-    recommended_ov = {
-        "disclaimers": [
-            "FOR PROFESSIONAL CLIENTS AND ELIGIBLE COUNTERPARTIES ONLY — No retail distribution permitted under MiFID II Art. 24.",
-            "Indicative terms and pricing are non-binding and subject to market volatility, internal credit approvals, and final execution documentation.",
-            "Sustainability-Linked & Green Bond Framework certified under ICMA Green Bond Principles with independent Second-Party Opinion (SPO)." if is_green else "Derivatives transactions subject to EMIR Refit (EU 2019/834) trade reporting and risk mitigation requirements.",
-            "Market data snapshots and benchmark spreads verified as of current market close."
-        ],
-        "caveat": "Indicative terms for discussion purposes only. Subject to credit approvals, KYC/AML, and market conditions at pricing."
-    }
+    sys_inst = (
+        "You are the ING Wholesale Banking Regulatory & Compliance Officer.\n"
+        f"CURRENT OPERATING CONTEXT: Today is {now_stamp}. The active operational year is {current_year}.\n"
+        f"Audit this 10-slide pitchbook for {client_name} ({p_family}) against MiFID II Art. 24, EMIR derivatives transparency, ICMA Principles, and FINRA 2210.\n\n"
+        "STRICT GROUNDING & AUDIT RULES:\n"
+        f"- DATE ANCHORING: The reference date '{now_stamp}' and year '{current_year}' are CURRENT. Do NOT flag {current_year} dates or 2026-2028 maturity horizons as future or speculative data.\n"
+        "- SLIDE 1: Cover page only. DO NOT flag for missing disclaimers.\n"
+        "- SLIDE 5: Audit debt maturity profile and FX sizing consistency. Flag if hedged numbers and stated residual gaps are mathematically contradictory.\n"
+        "- SLIDE 8: Check for proximate indicative pricing caveats (terms must state they are non-binding/subject to market conditions and credit approval).\n"
+        "- SLIDE 10: Check general disclaimers. If product family or hedging involves derivatives, check for EMIR classification/reporting notices.\n\n"
+        "Return a valid JSON object with keys:\n"
+        "compliant (bool), overall_risk_assessment (HIGH/MEDIUM/LOW), compliance_summary (string), flagged_slides (list of ints), flags (list of objects with slide_number, rule, issue, suggested_fix)."
+    )
 
-    result_json = {
-        "compliant": False,
-        "overall_risk_assessment": "MEDIUM",
-        "compliance_summary": f"EU Regulatory Audit completed for {client_name} ({p_family}). Identified 2 standard disclosure enhancements under MiFID II Art. 24 and {'ICMA / EU Green Bond Standard' if is_green else 'EMIR Refit derivatives rules'}.",
-        "flagged_slides": [8, 10],
-        "flags": [
-            {
-                "slide_number": 8,
-                "rule": "MiFID II Art. 24(4) (Indicative Pricing Caveat)",
-                "issue": f"Indicative pricing ({indicative_pricing}) requires proximate non-binding execution qualification.",
-                "suggested_fix": "Add proximate disclaimer: 'Indicative terms for discussion purposes only; subject to market conditions and credit approval.'"
-            },
-            {
-                "slide_number": 10,
-                "rule": "EU GBS / ICMA Principles" if is_green else "EMIR Refit (Derivatives Transparency)",
-                "issue": "Requires explicit Second-Party Opinion (SPO) reference" if is_green else "Derivatives hedging requires EMIR trade reporting notice.",
-                "suggested_fix": "Certify SPO verification in regulatory disclosures." if is_green else "Inject EMIR trade reporting and clearing classification notice."
-            }
-        ],
-        "recommended_overrides": recommended_ov
-    }
+    result_json = None
+    project_id = os.getenv("GCP_PROJECT", "teach-telecom-ai-sandbox")
+    region = os.getenv("REGION", "europe-west1")
+
+    if GENAI_AVAILABLE:
+        try:
+            client_gcp = genai.Client(vertexai=True, project=project_id, location=region)
+            resp = client_gcp.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=json.dumps(audit_payload),
+                config=types.GenerateContentConfig(
+                    system_instruction=sys_inst,
+                    temperature=0.1,
+                    response_mime_type="application/json"
+                )
+            )
+            parsed = json.loads(resp.text)
+            if "flags" in parsed and "compliance_summary" in parsed:
+                result_json = parsed
+        except Exception as e:
+            logger.warning(f"Vertex AI compliance audit warning: {e}")
+
+    if not result_json:
+        result_json = {
+            "compliant": False,
+            "overall_risk_assessment": "MEDIUM",
+            "compliance_summary": f"Full regulatory audit completed for {client_name}. Identified recommended disclosures under MiFID II and {'EMIR derivative standards' if is_fx else 'ICMA / Prospectus Regulation'}.",
+            "flagged_slides": [5, 8, 10],
+            "flags": [
+                {
+                    "slide_number": 5,
+                    "rule": "MiFID II Art. 24 (Market Data Currency)",
+                    "issue": "Market rate snapshot requires timestamp certification.",
+                    "suggested_fix": f"Market Snapshot as of {now_stamp}"
+                },
+                {
+                    "slide_number": 8,
+                    "rule": "EMIR / MiFID II (Indicative Derivatives Notice)" if is_fx else "FINRA 2210 (Indicative Pricing Caveat)",
+                    "issue": "Preliminary pricing corridor requires formal non-binding execution qualification.",
+                    "suggested_fix": "*Indicative terms subject to market volatility, ISDA documentation, and final credit approval.*"
+                },
+                {
+                    "slide_number": 10,
+                    "rule": "MiFID II / EMIR (Target Market & Investor Classification)",
+                    "issue": "Professional Client & Eligible Counterparty restrictions must be explicitly active.",
+                    "suggested_fix": "FOR PROFESSIONAL CLIENTS AND ELIGIBLE COUNTERPARTIES ONLY: Target market under MiFID II is eligible counterparties and professional clients only."
+                }
+            ]
+        }
 
     return result_json
 
 @app.post("/api/copilot/chat")
-@app.post("/api/chat")
 def copilot_chat_endpoint(req: CopilotMessage):
     cid = req.client_id
     prompt = req.prompt
@@ -1108,7 +1131,7 @@ def copilot_chat_endpoint(req: CopilotMessage):
         "slide_4": {"title": "04. Balance Sheet Foundation", "net_debt": db_net_debt, "liquidity": db_liq, "card3_label": s4_card3_label, "card3_value": s4_card3_val, "credit_rating": db_rating, "revenue": db_rev, "ebitda": db_ebitda},
         "slide_5": {"title": s5_title, "details": s5_data},
         "slide_6": {"title": "06. Greenium Sensitivity" if is_green else ("06. FX Collar Payoff Corridor" if is_fx else "06. Refinancing Sensitivity"), "spread_or_strike": current_ov.get("spread", "Mid-Swap + 77 bps" if is_green else "1.0850 - 1.0450 Floor/Cap")},
-        "slide_7": {"title": "07. ESG Market Backdrop" if is_green else ("07. Forward Points & Rates" if is_fx else "07. Market Backdrop"), "eur_green_spread": current_ov.get("eur_green_spread", "77 bps") if is_green else None, "greenium_concession": current_ov.get("greenium_concession", "-5 bps") if is_green else None, "ecb_refi_rate": current_ov.get("ecb_rate") or current_ov.get("ecb_refi_rate", "2.25%"), "itraxx_main": current_ov.get("itraxx_main") or current_ov.get("itraxx", "58 bps"), "swap_5y": current_ov.get("swap_5y", bundle.get("swap_5y", "2.62%")), "bund_10y": current_ov.get("bund_10y", bundle.get("bund_10y", "2.61%"))},
+        "slide_7": {"title": "07. Market Backdrop", "swap_5y": current_ov.get("swap_5y", bundle.get("swap_5y", "2.62%")), "bund_10y": current_ov.get("bund_10y", bundle.get("bund_10y", "2.61%")), "itraxx_main": current_ov.get("itraxx_main", bundle.get("itraxx_main", "58 bps"))},
         "slide_8": {"title": s8_title, "leg_1": s8_leg1, "leg_2": s8_leg2},
         "slide_9": {"title": "09. Execution Roadmap", "milestones": ["Mandate & Framework Publication", "Global Investor Roadshow", "Syndicated Bookbuilding & Pricing"]},
         "slide_10": {"title": "10. Regulatory Disclosures", "standards": "ICMA Green Bond Principles" if is_green else ("EMIR Refit & MiFID II" if is_fx else "MiFID II Professional Clients & Eligible Counterparties")}
@@ -1170,32 +1193,8 @@ Do not include Markdown code fences around the JSON object."""
                         reply_text = ""
                     else:
                         reply_text = candidate_reply
-                    if "overrides" in parsed and isinstance(parsed["overrides"], dict):
-                        raw_ov = parsed["overrides"]
-                        flat_ov = {}
-                        for k, v in raw_ov.items():
-                            if isinstance(v, dict):
-                                # If Gemini returned {"slide_7": {"itraxx_main": "60 bps"}}
-                                for sub_k, sub_v in v.items():
-                                    flat_ov[sub_k] = sub_v
-                            else:
-                                flat_ov[k] = v
-                        
-                        # Apply aliases for frontend bindings
-                        if "itraxx" in flat_ov and "itraxx_main" not in flat_ov:
-                            flat_ov["itraxx_main"] = flat_ov["itraxx"]
-                        if "ecb_refi_rate" in flat_ov and "ecb_rate" not in flat_ov:
-                            flat_ov["ecb_rate"] = flat_ov["ecb_refi_rate"]
-                        if "green_spread" in flat_ov and "eur_green_spread" not in flat_ov:
-                            flat_ov["eur_green_spread"] = flat_ov["green_spread"]
-                        if "liquidity" in flat_ov and "liquidity_str" not in flat_ov:
-                            flat_ov["liquidity_str"] = flat_ov["liquidity"]
-                        if "net_debt" in flat_ov and "net_debt_str" not in flat_ov:
-                            flat_ov["net_debt_str"] = flat_ov["net_debt"]
-                        if "capex" in flat_ov and "unhedged_gap_str" not in flat_ov:
-                            flat_ov["unhedged_gap_str"] = flat_ov["capex"]
-                            
-                        merged_overrides.update(flat_ov)
+                if "overrides" in parsed and isinstance(parsed["overrides"], dict):
+                    merged_overrides.update(parsed["overrides"])
         except Exception as e:
             logger.warning(f"Vertex AI Copilot call warning: {e}")
 

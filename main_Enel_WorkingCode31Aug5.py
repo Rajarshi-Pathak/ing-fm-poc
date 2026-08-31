@@ -142,9 +142,8 @@ class OpportunityRequest(BaseModel):
 class CopilotMessage(BaseModel):
     client_id: str
     prompt: str
-    history: Optional[List[Dict[str, Any]]] = []
+    history: Optional[List[Dict[str, str]]] = []
     current_overrides: Optional[Dict[str, Any]] = None
-    current_slide_index: Optional[int] = 0
 
 
 class ComplianceAuditRequest(BaseModel):
@@ -850,299 +849,390 @@ def check_compliance_endpoint(req: ComplianceAuditRequest):
     cid = req.client_id
     bundle = fetch_pitchbook_bundle(cid, cid, get_db_connection)
     client_name = bundle.get("client_name", "Corporate Client")
-    from pitchbook_builder import detect_product_family
-    p_family = detect_product_family(bundle)
-    bundle["product_family"] = p_family
+    p_family = bundle.get("product_family", "DCM_REFI")
     ov = req.overrides or {}
     now_stamp = datetime.now().strftime("%d %B %Y, %H:%M CET")
-    is_green = (p_family == "GREEN_ESG")
     is_fx = (p_family == "FX_HEDGE")
-    is_rates = (p_family == "RATES_HEDGE")
 
-    # Dynamic indicative pricing based on product family
+    # Product-appropriate term sheet pricing
     if is_fx:
-        indicative_pricing = ov.get("term_pricing") or "Zero Net Upfront Premium (Zero-Cost Collar 1.0450 - 1.0850)"
-    elif is_green:
-        indicative_pricing = ov.get("spread") or "Mid-Swap + 77 bps (Greenium: -5 bps)"
+        indicative_pricing = ov.get("term_pricing") or ov.get("collar_structure") or "Zero Net Upfront Premium (Zero-Cost Collar corridor 1.0450 - 1.0850)"
     else:
-        indicative_pricing = ov.get("spread") or "Mid-Swap + 82 bps"
+        indicative_pricing = ov.get("term_pricing") or ov.get("spread") or "Mid-Swap + 82 bps"
 
     now_dt = datetime.now()
     current_year = now_dt.year
-
-    # Product-grounded slide audit payload
-    s5_desc = "Eligible Green CapEx Pool (€3.5B Renewables, Grids, Storage)" if is_green else (
-        "FX Exposure & Hedged Corridor ($6-8B unhedged gap)" if is_fx else "24M Debt Maturity Profile"
-    )
 
     audit_payload = {
         "client_name": client_name,
         "product_family": p_family,
         "current_audit_date": now_stamp,
-        "slide_01_cover": f"Cover Title and Branding for {client_name}",
+        "slide_01_cover": "Cover Title and Target Client Branding",
+        "slide_03_exec_summary": "Executive Context & Opportunity Rationale",
         "slide_04_balance_sheet": "Balance Sheet & Liquidity Overview",
-        "slide_05_deal_core": s5_desc,
-        "slide_06_sensitivity": "Greenium / Spread Sensitivity" if is_green else "Scenario Sensitivity",
-        "slide_08_term_sheet": f"Indicative Terms: {indicative_pricing}",
+        "slide_05_debt_maturity_and_fx": "Debt Maturity Profile & Refinancing Horizon (Tranche clustering 2026-2028, FX Policy Sizing & Hedged Ratios)",
+        "slide_06_sensitivity": "Scenario Sensitivity Analysis",
+        "slide_07_execution_roadmap": "Syndicate Execution Timeline",
+        "slide_08_term_sheet": "Indicative Terms: " + indicative_pricing,
         "slide_10_disclaimers": ov.get("disclaimers", [
             "Prepared for illustrative and discussion purposes only; not an offer or solicitation.",
-            "Target market under MiFID II: Eligible counterparties and professional clients only.",
-            "Rates, levels, and spreads are indicative, subject to market conditions, and non-binding."
+            "Target market under MiFID II / UK MiFIR: Eligible counterparties and professional clients only.",
+            "Non-independent investment research disclaimer.",
+            "Rates, levels, and spreads are indicative, subject to change, and not tradeable prices."
         ])
     }
 
-    # Authentic EU Wholesale Regulatory Rules
-    recommended_ov = {
-        "disclaimers": [
-            "FOR PROFESSIONAL CLIENTS AND ELIGIBLE COUNTERPARTIES ONLY — No retail distribution permitted under MiFID II Art. 24.",
-            "Indicative terms and pricing are non-binding and subject to market volatility, internal credit approvals, and final execution documentation.",
-            "Sustainability-Linked & Green Bond Framework certified under ICMA Green Bond Principles with independent Second-Party Opinion (SPO)." if is_green else "Derivatives transactions subject to EMIR Refit (EU 2019/834) trade reporting and risk mitigation requirements.",
-            "Market data snapshots and benchmark spreads verified as of current market close."
-        ],
-        "caveat": "Indicative terms for discussion purposes only. Subject to credit approvals, KYC/AML, and market conditions at pricing."
-    }
+    sys_inst = (
+        "You are the ING Wholesale Banking Regulatory & Compliance Officer.\n"
+        f"CURRENT OPERATING CONTEXT: Today is {now_stamp}. The active operational year is {current_year}.\n"
+        f"Audit this 10-slide pitchbook for {client_name} ({p_family}) against MiFID II Art. 24, EMIR derivatives transparency, ICMA Principles, and FINRA 2210.\n\n"
+        "STRICT GROUNDING & AUDIT RULES:\n"
+        f"- DATE ANCHORING: The reference date '{now_stamp}' and year '{current_year}' are CURRENT. Do NOT flag {current_year} dates or 2026-2028 maturity horizons as future or speculative data.\n"
+        "- SLIDE 1: Cover page only. DO NOT flag for missing disclaimers.\n"
+        "- SLIDE 5: Audit debt maturity profile and FX sizing consistency. Flag if hedged numbers and stated residual gaps are mathematically contradictory.\n"
+        "- SLIDE 8: Check for proximate indicative pricing caveats (terms must state they are non-binding/subject to market conditions and credit approval).\n"
+        "- SLIDE 10: Check general disclaimers. If product family or hedging involves derivatives, check for EMIR classification/reporting notices.\n\n"
+        "Return a valid JSON object with keys:\n"
+        "compliant (bool), overall_risk_assessment (HIGH/MEDIUM/LOW), compliance_summary (string), flagged_slides (list of ints), flags (list of objects with slide_number, rule, issue, suggested_fix)."
+    )
 
-    result_json = {
-        "compliant": False,
-        "overall_risk_assessment": "MEDIUM",
-        "compliance_summary": f"EU Regulatory Audit completed for {client_name} ({p_family}). Identified 2 standard disclosure enhancements under MiFID II Art. 24 and {'ICMA / EU Green Bond Standard' if is_green else 'EMIR Refit derivatives rules'}.",
-        "flagged_slides": [8, 10],
-        "flags": [
-            {
-                "slide_number": 8,
-                "rule": "MiFID II Art. 24(4) (Indicative Pricing Caveat)",
-                "issue": f"Indicative pricing ({indicative_pricing}) requires proximate non-binding execution qualification.",
-                "suggested_fix": "Add proximate disclaimer: 'Indicative terms for discussion purposes only; subject to market conditions and credit approval.'"
-            },
-            {
-                "slide_number": 10,
-                "rule": "EU GBS / ICMA Principles" if is_green else "EMIR Refit (Derivatives Transparency)",
-                "issue": "Requires explicit Second-Party Opinion (SPO) reference" if is_green else "Derivatives hedging requires EMIR trade reporting notice.",
-                "suggested_fix": "Certify SPO verification in regulatory disclosures." if is_green else "Inject EMIR trade reporting and clearing classification notice."
-            }
-        ],
-        "recommended_overrides": recommended_ov
-    }
+    result_json = None
+    project_id = os.getenv("GCP_PROJECT", "teach-telecom-ai-sandbox")
+    region = os.getenv("REGION", "europe-west1")
+
+    if GENAI_AVAILABLE:
+        try:
+            client_gcp = genai.Client(vertexai=True, project=project_id, location=region)
+            resp = client_gcp.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=json.dumps(audit_payload),
+                config=types.GenerateContentConfig(
+                    system_instruction=sys_inst,
+                    temperature=0.1,
+                    response_mime_type="application/json"
+                )
+            )
+            parsed = json.loads(resp.text)
+            if "flags" in parsed and "compliance_summary" in parsed:
+                result_json = parsed
+        except Exception as e:
+            logger.warning(f"Vertex AI compliance audit warning: {e}")
+
+    if not result_json:
+        result_json = {
+            "compliant": False,
+            "overall_risk_assessment": "MEDIUM",
+            "compliance_summary": f"Full regulatory audit completed for {client_name}. Identified recommended disclosures under MiFID II and {'EMIR derivative standards' if is_fx else 'ICMA / Prospectus Regulation'}.",
+            "flagged_slides": [5, 8, 10],
+            "flags": [
+                {
+                    "slide_number": 5,
+                    "rule": "MiFID II Art. 24 (Market Data Currency)",
+                    "issue": "Market rate snapshot requires timestamp certification.",
+                    "suggested_fix": f"Market Snapshot as of {now_stamp}"
+                },
+                {
+                    "slide_number": 8,
+                    "rule": "EMIR / MiFID II (Indicative Derivatives Notice)" if is_fx else "FINRA 2210 (Indicative Pricing Caveat)",
+                    "issue": "Preliminary pricing corridor requires formal non-binding execution qualification.",
+                    "suggested_fix": "*Indicative terms subject to market volatility, ISDA documentation, and final credit approval.*"
+                },
+                {
+                    "slide_number": 10,
+                    "rule": "MiFID II / EMIR (Target Market & Investor Classification)",
+                    "issue": "Professional Client & Eligible Counterparty restrictions must be explicitly active.",
+                    "suggested_fix": "FOR PROFESSIONAL CLIENTS AND ELIGIBLE COUNTERPARTIES ONLY: Target market under MiFID II is eligible counterparties and professional clients only."
+                }
+            ]
+        }
 
     return result_json
 
 @app.post("/api/copilot/chat")
-@app.post("/api/chat")
 def copilot_chat_endpoint(req: CopilotMessage):
     cid = req.client_id
     prompt = req.prompt
     history = req.history or []
     now_stamp = datetime.now().strftime("%d %B %Y, %H:%M CET")
 
-    project_id = os.getenv("GCP_PROJECT", "teach-telecom-ai-sandbox")
-    region = os.getenv("REGION", "europe-west1")
-
     bundle = fetch_pitchbook_bundle(cid, cid, get_db_connection)
-    client_name = bundle.get("client_name") or bundle.get("name") or "Corporate Client"
+    client_name = bundle.get("client_name", "Corporate Client")
+    p_family = bundle.get("product_family", "DCM_REFI")
+    maturities_data = get_client_maturities(cid)
     current_ov = req.current_overrides or {}
 
     history_str = ""
     for h in history[-6:]:
         speaker = "RM" if h.get("sender") == "user" else "Copilot"
-        h_text = str(h.get("text") or "")
-        lower_h = h_text.lower()
-        if any(w in lower_h for w in ["compliance", "audit", "remediat", "finra", "mifid"]):
-            h_text = "[System: Compliance audit performed and certified]"
-        elif len(h_text) > 150:
-            h_text = h_text[:150] + "..."
-        history_str += speaker + ": " + h_text + "\n"
-    from pitchbook_builder import detect_product_family, get_product_kicker, get_product_subtitle
-    p_family = detect_product_family(bundle)
-    bundle["product_family"] = p_family
+        history_str += f"{speaker}: {h.get('text')}\n"
 
+    system_instruction = """You are the senior ING Financial Markets Origination & Structuring Copilot.
+You assist Relationship Managers (RMs) by explaining pitchbook slides, providing CFO talking points, analyzing exposures, and dynamically updating slide parameters.
+
+10-SLIDE PITCHBOOK ARCHITECTURE & CONTEXT MAP:
+- Slide 1: Cover Slide (client_name, kicker, subtitle, rm_name, market_date)
+- Slide 2: Deal Catalyst & Strategic Trigger (trigger, window, action)
+- Slide 3: Executive Summary & Strategic Pillars
+- Slide 4: Capital Structure & Financial Snapshot (revenue_str, ebitda_str, net_debt_str, liquidity_str, maturity_wall_str, debt_maturing_24m_str)
+- Slide 5: Exposure Horizon & Horizon Analysis (unhedged_gap_str, maturity_wall_str, usd_exposure, eur_cost, hedge_ratio, target_hedge_ratio)
+- Slide 6: Sensitivity Analysis & Payoff Corridor (rate_scenario_up, rate_scenario_lock, rate_scenario_down, fx_scen_up_unhedged, fx_scen_up_hedged, fx_scen_down_unhedged)
+- Slide 7: Macroeconomic Backdrop & Curve Dynamics (swap_5y, bund_10y, itraxx_main, market_date)
+- Slide 8: Indicative Transaction Term Sheet (notional_bond, spread, tenor, spread_disclaimer)
+- Slide 9: Execution Roadmap & Syndication Timeline
+- Slide 10: Regulatory Disclosures, Compliance & MiFID II Disclaimers (disclaimers)
+
+CRITICAL RULES:
+1. When asked to EXPLAIN or ANALYZE a slide (e.g. "explain slide 2", "talking points for slide 4"), you MUST read and reference the exact slide fields and numbers in "active_deck_slides" for that slide (e.g., triggers, window, actions, rates, notional, spreads).
+2. Whenever the user asks to edit, replace, update, or change ANY value, number, or text on any slide, you MUST:
+   a. Return a clear explanation and strategic rationale in "reply".
+   b. ALWAYS include the modified state key in "overrides" with the exact formatted string!
+
+MUTATION EXAMPLES:
+- User: "In Slide 2, change €3.2B debt maturities to €1.2B debt maturities"
+  -> "overrides": {"trigger": "Upcoming €1.2B debt maturities face repricing risk amid benchmark curve fluctuations."}
+- User: "In Slide 4, change €3,000M to €1,000M"
+  -> "overrides": {"maturity_wall_str": "€1,000M", "debt_maturing_24m_str": "€1,000M"}
+- User: "In Slide 4, set Net Debt to €15,000M"
+  -> "overrides": {"net_debt_str": "€15,000M"}
+- User: "In Slide 7, update iTraxx Main to 60 bps"
+  -> "overrides": {"itraxx_main": "60 bps"}
+- User: "In Slide 8, set tenor to 10 Years"
+  -> "overrides": {"tenor": "10 Years (Euro Benchmark)"}
+- User: "In Slide 8, set pricing to Mid-Swap + 75 bps"
+  -> "overrides": {"spread": "Mid-Swap + 75 bps"}
+
+If no edit was requested (e.g. "Explain Slide 2"), return "overrides": {}.
+
+OUTPUT REQUIREMENT:
+You must ALWAYS return a single valid JSON object with exactly two keys: "reply" (string) and "overrides" (object).
+NEVER output raw markdown code fences around the JSON; return pure valid JSON."""
+
+    # Build complete active slide context for full preview parity
+    # Build dynamic 10-slide context with 100% database-driven values
     is_green = (p_family == "GREEN_ESG")
     is_fx = (p_family == "FX_HEDGE")
     is_rates = (p_family == "RATES_HEDGE")
 
-    # Dynamic DB Metrics directly from bundle & overrides
-    db_wall_str = current_ov.get("maturity_wall_str") or bundle.get("debt_maturing_24m_str") or (f"€{bundle.get('debt_maturing_24m', 0):,.0f}M" if bundle.get('debt_maturing_24m') else "€3,000M")
-    db_net_debt = current_ov.get("net_debt_str") or bundle.get("net_debt_str") or (f"€{bundle.get('net_debt', 0):,.0f}M" if bundle.get('net_debt') else "€58,500M" if is_green else "€16,200M")
-    db_liq = current_ov.get("liquidity_str") or bundle.get("liquidity_str") or (f"€{bundle.get('liquidity', 0):,.0f}M" if bundle.get('liquidity') else "€14,200M" if is_green else "€7,800M")
+    # Dynamic metrics from DB bundle & overrides
+    db_wall_str = current_ov.get("maturity_wall_str") or bundle.get("debt_maturing_24m_str") or (f"€{bundle.get('debt_maturing_24m', 0):,.0f}M" if bundle.get('debt_maturing_24m') else "N/A")
+    db_net_debt = current_ov.get("net_debt_str") or bundle.get("net_debt_str") or (f"€{bundle.get('net_debt', 0):,.0f}M" if bundle.get('net_debt') else "N/A")
+    db_liq = current_ov.get("liquidity_str") or bundle.get("liquidity_str") or (f"€{bundle.get('liquidity', 0):,.0f}M" if bundle.get('liquidity') else "N/A")
     db_rev = current_ov.get("revenue_str") or bundle.get("revenue_str") or (f"€{bundle.get('revenue_eur_m', 0):,.0f}M" if bundle.get('revenue_eur_m') else "N/A")
     db_ebitda = current_ov.get("ebitda_str") or bundle.get("ebitda_str") or (f"€{bundle.get('ebitda_eur_m', 0):,.0f}M" if bundle.get('ebitda_eur_m') else "N/A")
-    raw_db_rating = current_ov.get("tier") or bundle.get("tier") or bundle.get("credit_rating") or "Tier 1 (Investment Grade)"
-    db_rating = "Tier 1 (Investment Grade)" if "tier 1" in str(raw_db_rating).lower() else raw_db_rating
+    db_rating = current_ov.get("tier") or bundle.get("tier") or bundle.get("credit_rating") or "Tier 1 (Investment Grade)"
+    db_notional = current_ov.get("notional_bond") or bundle.get("notional_bond") or "EUR 600,000,000"
+    db_swap_notional = current_ov.get("notional_swap") or bundle.get("notional_swap") or "EUR 400,000,000"
+    db_tenor = current_ov.get("tenor") or bundle.get("tenor") or "7 Years (T + 7Y)"
+    db_spread = current_ov.get("spread") or bundle.get("indicative_spread") or "Mid-Swap + 82 bps"
 
     # Slide 1: Cover
-    s1_kicker = current_ov.get("kicker") or get_product_kicker(p_family)
-    s1_subtitle = current_ov.get("subtitle") or get_product_subtitle(p_family)
+    s1_kicker = current_ov.get("kicker") or bundle.get("kicker") or (
+        "SUSTAINABLE & ESG CAPITAL STRUCTURING" if is_green else
+        "FX & COMMODITY RISK ADVISORY" if is_fx else
+        "RATES RISK & LIABILITY MANAGEMENT" if is_rates else "DCM CAPITAL STRUCTURING"
+    )
+    s1_subtitle = current_ov.get("subtitle") or bundle.get("subtitle") or bundle.get("next_best_action") or "Strategic Optimization Mandate"
 
-    # Slide 2: Catalyst
+    # Slide 2: Strategic Catalyst
+    s2_title = (
+        "ESG Capital Strategy & Decarbonization Catalyst" if is_green else
+        "Currency Exposure & Market Catalyst" if is_fx else
+        "Rate Path Volatility & IRS Pre-Hedge Catalyst" if is_rates else "Executive Context & Opportunity Rationale"
+    )
     s2_trigger = current_ov.get("trigger") or bundle.get("why_now_nlg") or (
-        "EU Taxonomy alignment: €3.5B eligible renewable & decarbonization CapEx pipeline ready for green financing." if is_green else
-        ("North American expansion increased USD revenue to >$12B against 50% hedge ratio (~$6-8bn unhedged gap)." if is_fx else
-        f"Upcoming {db_wall_str} debt maturities face repricing risk amid benchmark curve fluctuations.")
+        f"Upcoming {db_wall_str} debt maturities face repricing risk amid benchmark curve fluctuations." if db_wall_str != "N/A" else
+        "Balance sheet optimization and refinancing window identified."
     )
-    s2_window = current_ov.get("window") or (
-        "Strong ESG investor liquidity generating 3-7 bps greenium pricing concession across European green bonds." if is_green else
-        ("EUR/USD spot corridor provides optimal entry for structured zero-cost collar protection." if is_fx else
-        f"Current 5Y EUR swap easing at {bundle.get('swap_5y', '2.62%')} provides attractive pre-hedge lock window.")
-    )
-    s2_action = current_ov.get("action") or bundle.get("next_best_action") or (
-        "Issue inaugural EUR 500M 7Y Green Hybrid Bond + EUR 250M Sustainability-Linked overlay." if is_green else
-        ("Structure 12M participating zero-cost collar hedging programme." if is_fx else
-        f"Execute {bundle.get('notional_bond', 'EUR 600,000,000')} capital markets financing & swap overlay.")
+    s2_window = current_ov.get("window") or f"Current 5Y EUR swap easing at {bundle.get('swap_5y', '2.62%')} provides attractive entry window."
+    s2_action = current_ov.get("action") or bundle.get("next_best_action") or f"Execute {db_notional} capital markets financing program."
+
+    # Slide 3: Executive Summary
+    s3_title = "Executive Summary"
+    s3_focus = (
+        "Sustainable Finance Framework" if is_green else
+        "Strategic FX Architecture" if is_fx else
+        "Rate Risk Immunisation" if is_rates else "Proactive Capital Structuring"
     )
 
-    # Dynamic Slide 4, 5, 8 configuration per product family
-    if is_green:
-        s4_card3_label = "Eligible Green CapEx"
-        s4_card3_val = current_ov.get("unhedged_gap_str") or "€3.5B (Renewables, Grids, Storage)"
-        s5_title = "05. Eligible Green Asset Pool & Use of Proceeds"
-        s5_data = {
-            "total_eligible_pool": "€3,500M",
-            "breakdown": {
-                "Renewable Generation (Solar & Wind)": "€1,850M",
-                "Grid Modernization (Smart Metering)": "€1,100M",
-                "Energy Storage (Battery Systems)": "€550M"
-            },
-            "framework": "ICMA Green Bond Principles & EU Taxonomy with Second-Party Opinion (SPO)"
-        }
-        s8_title = "08. Green Bond Term Sheet"
-        s8_leg1 = {
-            "instrument": "Green Bond Tranche",
-            "notional": current_ov.get("notional_bond", "EUR 500,000,000"),
-            "tenor": current_ov.get("tenor", "7 Years (T + 7Y)"),
-            "benchmark": "7Y EUR mid-swap",
-            "spread": current_ov.get("spread", "Mid-swap + 77 bps (Greenium: -5 bps)"),
-            "documentation": "Green Bond Framework / EMTN Prospectus"
-        }
-        s8_leg2 = {
-            "instrument": "Sustainability Overlay",
-            "notional": current_ov.get("notional_swap", "EUR 250,000,000"),
-            "tenor": "Annual SPT verification window",
-            "benchmark": "Scope 1 & 2 Decarbonisation KPI",
-            "spread": "+/- 5 bps SPT step-up / step-down",
-            "documentation": "ICMA Green Bond Principles + SPO"
-        }
-    elif is_fx:
-        s4_card3_label = "Unhedged FX Gap"
-        s4_card3_val = current_ov.get("unhedged_gap_str", "$6.0B - $8.0B")
-        s5_title = "05. FX Sizing & Hedging Gap Analysis"
-        s5_data = {
-            "unhedged_gap": "$6.0B - $8.0B",
-            "current_hedge_ratio": "50%",
-            "target_hedge_ratio": "75%",
-            "currency_pair": "EUR/USD",
-            "strategic_recommendation": bundle.get("next_best_action") or "Implement structured zero-cost collar across 4 quarterly tranches."
-        }
-        s8_title = "08. FX Hedging Term Sheet"
-        s8_leg1 = {
-            "instrument": "Zero-Cost Participating Collar",
-            "notional": current_ov.get("notional_bond", "USD 500,000,000"),
-            "tenor": current_ov.get("tenor", "12 Months (Layered Tranches)"),
-            "protection_floor": "1.0850 EUR/USD",
-            "cap_strike": "1.0450 EUR/USD",
-            "documentation": "ISDA Master Agreement / CSA"
-        }
-        s8_leg2 = {
-            "instrument": "Layered Roll Programme",
-            "notional": current_ov.get("notional_swap", "USD 250,000,000"),
-            "tenor": "Quarterly Roll Window",
-            "benchmark": "ECB Fixing / Forward Points",
-            "spread": "Zero Upfront Premium",
-            "documentation": "EMIR Reporting & Trade Confirmation"
-        }
-    elif is_rates:
-        s4_card3_label = "24M Maturity Wall"
-        s4_card3_val = db_wall_str
-        s5_title = "05. Interest Rate Sensitivity & Maturity Horizon"
-        s5_data = {
-            "maturities_24m": db_wall_str,
-            "pre_hedge_target": "EUR 1.2B 6Y Fixed-to-Floating IRS",
-            "benchmark_rate": "2.58% 6Y Mid-Swap",
-            "strategic_recommendation": bundle.get("next_best_action") or "Lock swap spreads ahead of upcoming benchmark refinancing."
-        }
-        s8_title = "08. Rates Pre-Hedge Term Sheet"
-        s8_leg1 = {
-            "instrument": "Senior EMTN Benchmark",
-            "notional": current_ov.get("notional_bond", "EUR 2,000,000,000"),
-            "tenor": current_ov.get("tenor", "6 Years (T + 6Y)"),
-            "benchmark": "6Y EUR mid-swap",
-            "spread": current_ov.get("spread", "Mid-Swap + 65 bps"),
-            "documentation": "EMTN Programme Prospectus"
-        }
-        s8_leg2 = {
-            "instrument": "Pre-Hedge Fixed-to-Floating IRS",
-            "notional": current_ov.get("notional_swap", "EUR 1,200,000,000"),
-            "tenor": "6 Years Amortising",
-            "benchmark": "EURIBOR 6M vs Fixed 2.58%",
-            "spread": "Flat Mid-Market",
-            "documentation": "ISDA Master Agreement"
-        }
+    # Slide 4: Balance Sheet Foundation
+    s4_title = (
+        "Balance Sheet Capacity & Green CapEx Profile" if is_green else
+        "Corporate Liquidity & Currency Inflow Profile" if is_fx else
+        "Capital Structure & Liquidity Snapshot" if is_rates else "Capital Structure & Treasury Health Profile"
+    )
+    s4_card3_label = "Eligible Green CapEx" if is_green else ("Unhedged FX Gap" if is_fx else "24M Maturity Wall")
+    s4_card3_val = current_ov.get("unhedged_gap_str") or db_wall_str
+
+    # Slide 5: Debt & Swap Horizon / Use of Proceeds / FX Gap
+    s5_title = (
+        "Eligible Green Asset Pool & Use of Proceeds" if is_green else
+        "FX Currency Breakdown & Hedging Gap" if is_fx else
+        "Debt Maturity Profile & Swap Refinancing Horizon" if is_rates else "Debt Maturity Profile & Refinancing Horizon"
+    )
+    
+    # Format maturities dynamically from SQL rows
+    if maturities_data and len(maturities_data) > 0:
+        mat_summary = " | ".join([f"{m.get('maturity_year') or m.get('year')}: €{m.get('amount_eur_m') or m.get('amount')}M ({m.get('instrument_type') or m.get('description') or 'Debt'})" for m in maturities_data[:4]])
     else:
-        s4_card3_label = "24M Maturity Wall"
-        s4_card3_val = db_wall_str
-        s5_title = "05. Debt Maturity Profile & Refinancing Horizon"
-        s5_data = {
-            "maturities_24m": db_wall_str,
-            "strategic_recommendation": bundle.get("next_best_action") or "Smooth debt maturity profile through dual-tranche benchmark issuance."
-        }
-        s8_title = "08. Indicative Term Sheet"
-        s8_leg1 = {
-            "instrument": "Senior EMTN Tranche",
-            "notional": current_ov.get("notional_bond", "EUR 600,000,000"),
-            "tenor": current_ov.get("tenor", "7 Years (T + 7Y)"),
-            "benchmark": "7Y EUR mid-swap",
-            "spread": current_ov.get("spread", "Mid-Swap + 82 bps"),
-            "documentation": "EMTN Programme / Prospectus"
-        }
-        s8_leg2 = {
-            "instrument": "Liquidity RCF / CP",
-            "notional": current_ov.get("notional_swap", "EUR 400,000,000"),
-            "tenor": "3–5 Years Revolving",
-            "benchmark": "EURIBOR",
-            "spread": "EURIBOR + 45 bps",
-            "documentation": "LMA Standard Facility Agreement"
-        }
+        mat_summary = f"Total 24M Maturity Wall: {db_wall_str}"
 
-    active_deck_slides = {
-        "slide_1": {"title": "01. Cover Slide", "kicker": s1_kicker, "client_name": client_name, "subtitle": s1_subtitle},
-        "slide_2": {"title": "02. Decarbonization Catalyst" if is_green else ("02. FX Risk Catalyst" if is_fx else "02. Strategic Catalyst"), "trigger": s2_trigger, "window": s2_window, "action": s2_action},
-        "slide_3": {"title": "03. Executive Summary", "focus": f"Proactive capital markets structuring and execution for {client_name}."},
-        "slide_4": {"title": "04. Balance Sheet Foundation", "net_debt": db_net_debt, "liquidity": db_liq, "card3_label": s4_card3_label, "card3_value": s4_card3_val, "credit_rating": db_rating, "revenue": db_rev, "ebitda": db_ebitda},
-        "slide_5": {"title": s5_title, "details": s5_data},
-        "slide_6": {"title": "06. Greenium Sensitivity" if is_green else ("06. FX Collar Payoff Corridor" if is_fx else "06. Refinancing Sensitivity"), "spread_or_strike": current_ov.get("spread", "Mid-Swap + 77 bps" if is_green else "1.0850 - 1.0450 Floor/Cap")},
-        "slide_7": {"title": "07. ESG Market Backdrop" if is_green else ("07. Forward Points & Rates" if is_fx else "07. Market Backdrop"), "eur_green_spread": current_ov.get("eur_green_spread", "77 bps") if is_green else None, "greenium_concession": current_ov.get("greenium_concession", "-5 bps") if is_green else None, "ecb_refi_rate": current_ov.get("ecb_rate") or current_ov.get("ecb_refi_rate", "2.25%"), "itraxx_main": current_ov.get("itraxx_main") or current_ov.get("itraxx", "58 bps"), "swap_5y": current_ov.get("swap_5y", bundle.get("swap_5y", "2.62%")), "bund_10y": current_ov.get("bund_10y", bundle.get("bund_10y", "2.61%"))},
-        "slide_8": {"title": s8_title, "leg_1": s8_leg1, "leg_2": s8_leg2},
-        "slide_9": {"title": "09. Execution Roadmap", "milestones": ["Mandate & Framework Publication", "Global Investor Roadshow", "Syndicated Bookbuilding & Pricing"]},
-        "slide_10": {"title": "10. Regulatory Disclosures", "standards": "ICMA Green Bond Principles" if is_green else ("EMIR Refit & MiFID II" if is_fx else "MiFID II Professional Clients & Eligible Counterparties")}
+    s5_breakdown = mat_summary
+    s5_overlay_sizing = bundle.get("next_best_action") or "Proactive capital structuring and benchmark roadshows ensure optimal tenor extension."
+
+    # Slide 6: Strategic Rationale & Scenario Analysis
+    s6_title = (
+        "Rationale of our Proposal & Greenium Advantage" if is_green else
+        "Rationale of our Proposal & FX Corridor Analysis" if is_fx else
+        "Rationale of our Proposal & Rate Sensitivity" if is_rates else "Rationale of our Proposal & Refinancing Analysis"
+    )
+    s6_refi_pct = current_ov.get("refi_bond_pct", 60)
+    s6_prehedge_pct = current_ov.get("prehedge_swap_pct", 40)
+    s6_locked_rate = current_ov.get("rate_scenario_lock", "3.44% (locked)")
+    s6_rates_up = current_ov.get("rate_scenario_up", "4.44%")
+    s6_rates_down = current_ov.get("rate_scenario_down", "2.94%")
+
+    # Slide 7: Market Intelligence
+    s7_title = (
+        "ESG Credit Spreads & Green Bond Index Backdrop" if is_green else
+        "Central Bank Differentials & FX Forward Points" if is_fx else
+        "Benchmark Yields & Swap Curve Backdrop" if is_rates else "Benchmark Yields & Credit Spread Backdrop"
+    )
+    s7_metrics = {
+        "swap_5y": current_ov.get("swap_5y") or bundle.get("swap_5y") or "2.62%",
+        "bund_10y": current_ov.get("bund_10y") or bundle.get("bund_10y") or "2.61%",
+        "ecb_refi_rate": current_ov.get("ecb_rate") or "2.25%",
+        "fed_funds_rate": current_ov.get("fed_rate") or "4.00-4.25%",
+        "itraxx_europe_main": current_ov.get("itraxx_main") or bundle.get("itraxx_main") or "58 bps",
+        "green_spread": current_ov.get("green_spread") or "77 bps",
+        "greenium_concession": current_ov.get("greenium_bps") or "-5 bps"
     }
 
-    system_instruction = f"""You are the senior ING Financial Markets Origination & Structuring Copilot.
-You assist Relationship Managers (RMs) by delivering consultative advisory commentary, strategic rationale, CFO-level talking points, and executing live parameter overrides on pitchbook slides.
+    # Slide 8: Proposal Features (2-Leg Term Sheet)
+    s8_title = "Proposal features (2-Leg Term Sheet)"
+    s8_leg1 = {
+        "title": ("Leg 1 — Green Bond Tranche" if is_green else "Leg 1 — USD Bond Tranche" if is_fx else "Leg 1 — New Benchmark Bond" if is_rates else "Leg 1 — Senior EMTN Tranche"),
+        "notional": db_notional,
+        "tenor": db_tenor,
+        "benchmark": ("7Y EUR mid-swap" if not is_fx else "7Y US Treasury / SOFR"),
+        "spread": db_spread,
+        "documentation": ("Green Bond Framework / EMTN Prospectus" if is_green else "144A / Reg S Prospectus" if is_fx else "EMTN Programme / Prospectus")
+    }
+    s8_leg2 = {
+        "title": ("Leg 2 — Sustainability Overlay" if is_green else "Leg 2 — Cross-Currency Swap" if is_fx else "Leg 2 — Pre-Hedge Swap" if is_rates else "Leg 2 — Liquidity RCF / CP"),
+        "notional": db_swap_notional,
+        "tenor": ("Annual SPT verification window" if is_green else f"Matches bond maturity ({db_tenor})" if is_fx else "Terminates at bond pricing" if is_rates else "3–5 Years Revolving"),
+        "spread": ("+/- 5 bps SPT step-up/down" if is_green else "EURIBOR + 32 bps" if is_fx else "Current swap rate" if is_rates else "EURIBOR + 45 bps"),
+        "documentation": ("ICMA Green Bond Principles + SPO" if is_green else "ISDA Master Agreement + CSA" if (is_fx or is_rates) else "LMA Standard Facility Agreement")
+    }
 
-CURRENT ACTIVE DECK SLIDES (DATABASE GROUND TRUTH):
-{json.dumps(active_deck_slides, indent=2)}
+    # Slide 9: Execution Roadmap
+    s9_title = (
+        "Green Bond Framework & Issuance Timetable" if is_green else
+        "Layered Roll Framework & Desk Execution" if is_fx else
+        "ISDA Schedule, CSA & Execution Timeline" if is_rates else "Roadmap & Syndicate Timeline"
+    )
 
-RESPONSE ARCHITECTURE & STYLE GUIDELINES:
-1. **Consultative Structuring Partner Tone**: Speak like an experienced structuring director advising an RM. Avoid flat data lists, mechanical reciting, or robotic bullet dumps.
-2. **Mandatory 3-Part Slide Explanation Structure**:
-   When the user asks to explain, analyze, or provide talking points for a slide:
-   - **Strategic Objective**: Explain the strategic purpose of this slide and why it matters to the corporate treasury of {client_name}.
-   - **Key Mechanics & Deal Metrics**: Contextualize the exact figures, notionals, spreads, ratings, or milestones from the active slide into an analytical narrative.
-   - **CFO Pitch / Talking Points**: Provide 1-2 sharp, actionable talking points the RM can deliver directly to {client_name}'s CFO / Group Treasurer.
-3. **Absolute Grounding**: Reference the active product family ({p_family}) and numbers from the active deck above.
-4. **Parameter Mutations**: If the user requests updates (e.g. changing notional, tenor, spread, or trigger), explain the structuring impact in "reply" and return the updated key-value pairs in "overrides".
+    # Slide 10: Regulatory Disclosures
+    s10_title = (
+        "ICMA Green Bond Principles & Target Market Notice" if is_green else
+        "Target Market Notice & EMIR Derivative Disclosures" if (is_fx or is_rates) else "Regulatory Notices & Target Market Classification"
+    )
 
-OUTPUT FORMAT:
-Return a single valid JSON object:
-{{"reply": "<Structured consultative analysis formatted in clean Markdown>", "overrides": {{...}}}}
-Do not include Markdown code fences around the JSON object."""
-
+    slide_context = {
+        "slide_1_cover": {
+            "slide_number": 1,
+            "title": "Cover Slide",
+            "kicker": s1_kicker,
+            "client_name": client_name,
+            "subtitle": s1_subtitle,
+            "prepared_by": current_ov.get("rm_name") or bundle.get("rm_name") or "Coverage RM"
+        },
+        "slide_2_catalyst": {
+            "slide_number": 2,
+            "title": s2_title,
+            "primary_market_trigger": s2_trigger,
+            "window_of_opportunity": s2_window,
+            "recommended_action": s2_action
+        },
+        "slide_3_exec_summary": {
+            "slide_number": 3,
+            "title": s3_title,
+            "focus_area": s3_focus,
+            "summary_points": f"Tailored architecture for {client_name} based on group treasury requirements."
+        },
+        "slide_4_balance_sheet": {
+            "slide_number": 4,
+            "title": s4_title,
+            "net_debt": db_net_debt,
+            "liquidity": db_liq,
+            "third_metric": f"{s4_card3_label}: {s4_card3_val}",
+            "credit_rating": db_rating,
+            "annual_revenue": db_rev,
+            "annual_ebitda": db_ebitda
+        },
+        "slide_5_debt_and_swap_horizon": {
+            "slide_number": 5,
+            "title": s5_title,
+            "breakdown_data": s5_breakdown,
+            "strategy_and_sizing": s5_overlay_sizing,
+            "total_24m_wall_or_gap": s4_card3_val
+        },
+        "slide_6_sensitivity_and_rationale": {
+            "slide_number": 6,
+            "title": s6_title,
+            "refinance_percentage": f"{s6_refi_pct}%",
+            "prehedge_percentage": f"{s6_prehedge_pct}%",
+            "rate_lock": s6_locked_rate,
+            "rates_up_100bp": s6_rates_up,
+            "rates_down_50bp": s6_rates_down
+        },
+        "slide_7_market_intelligence": {
+            "slide_number": 7,
+            "title": s7_title,
+            "market_metrics": s7_metrics
+        },
+        "slide_8_term_sheet": {
+            "slide_number": 8,
+            "title": s8_title,
+            "leg_1_details": s8_leg1,
+            "leg_2_details": s8_leg2
+        },
+        "slide_9_execution_roadmap": {
+            "slide_number": 9,
+            "title": s9_title,
+            "phases": ["T - 4 Weeks: Sizing & Preparation", "T - 2 Weeks: Pre-Hedge Execution / SPO Verification", "T - 1 Week: Investor Roadshow", "T-Day: Syndicate Pricing & Settlement"]
+        },
+        "slide_10_regulatory_disclosures": {
+            "slide_number": 10,
+            "title": s10_title,
+            "disclaimers": current_ov.get("disclaimers") or [
+                "Strictly confidential. Indicative terms for professional counterparties only under MiFID II.",
+                "Non-independent investment research pursuant to MiFID II."
+            ]
+        }
+    }
     user_payload = {
-        "conversation_history": history_str,
-        "latest_prompt": prompt,
-        "current_slide_index": req.current_slide_index if hasattr(req, "current_slide_index") else 0
+        "client_profile": {
+            "client_id": cid,
+            "client_name": client_name,
+            "product_family": p_family,
+            "net_debt": bundle.get("net_debt_str"),
+            "liquidity": bundle.get("liquidity_str"),
+            "ebitda": bundle.get("ebitda_str"),
+            "leverage": bundle.get("leverage_str"),
+            "24m_maturity_wall": bundle.get("debt_maturing_24m_str"),
+            "maturities_schedule": maturities_data
+        },
+        "active_deck_slides": slide_context,
+        "current_deck_overrides": current_ov,
+        "recent_chat_history": history_str,
+        "user_request": prompt
     }
 
     reply_text = ""
-    merged_overrides = {}
+    merged_overrides = dict(current_ov)
+    project_id = os.getenv("GCP_PROJECT", "teach-telecom-ai-sandbox")
+    region = os.getenv("REGION", "europe-west1")
 
     if GENAI_AVAILABLE:
         try:
@@ -1158,58 +1248,25 @@ Do not include Markdown code fences around the JSON object."""
             )
             raw_text = response.text.strip() if response and response.text else ""
             if raw_text:
-                if "```json" in raw_text:
-                    raw_text = raw_text.split("```json")[1].split("```")[0].strip()
-                elif "```" in raw_text:
-                    raw_text = raw_text.split("```")[1].split("```")[0].strip()
                 parsed = json.loads(raw_text)
                 if "reply" in parsed:
-                    candidate_reply = str(parsed["reply"]).strip()
-                    # If Gemini returned a generic placeholder despite an explanation request, invalidate it to trigger detailed fallback
-                    if any(p in candidate_reply.lower() for p in ["how can i assist further", "processed your request", "how else can i help"]) and len(candidate_reply) < 120:
-                        reply_text = ""
-                    else:
-                        reply_text = candidate_reply
-                    if "overrides" in parsed and isinstance(parsed["overrides"], dict):
-                        raw_ov = parsed["overrides"]
-                        flat_ov = {}
-                        for k, v in raw_ov.items():
-                            if isinstance(v, dict):
-                                # If Gemini returned {"slide_7": {"itraxx_main": "60 bps"}}
-                                for sub_k, sub_v in v.items():
-                                    flat_ov[sub_k] = sub_v
-                            else:
-                                flat_ov[k] = v
-                        
-                        # Apply aliases for frontend bindings
-                        if "itraxx" in flat_ov and "itraxx_main" not in flat_ov:
-                            flat_ov["itraxx_main"] = flat_ov["itraxx"]
-                        if "ecb_refi_rate" in flat_ov and "ecb_rate" not in flat_ov:
-                            flat_ov["ecb_rate"] = flat_ov["ecb_refi_rate"]
-                        if "green_spread" in flat_ov and "eur_green_spread" not in flat_ov:
-                            flat_ov["eur_green_spread"] = flat_ov["green_spread"]
-                        if "liquidity" in flat_ov and "liquidity_str" not in flat_ov:
-                            flat_ov["liquidity_str"] = flat_ov["liquidity"]
-                        if "net_debt" in flat_ov and "net_debt_str" not in flat_ov:
-                            flat_ov["net_debt_str"] = flat_ov["net_debt"]
-                        if "capex" in flat_ov and "unhedged_gap_str" not in flat_ov:
-                            flat_ov["unhedged_gap_str"] = flat_ov["capex"]
-                            
-                        merged_overrides.update(flat_ov)
+                    reply_text = parsed["reply"]
+                if "overrides" in parsed and isinstance(parsed["overrides"], dict):
+                    merged_overrides.update(parsed["overrides"])
         except Exception as e:
-            logger.warning(f"Vertex AI Copilot call warning: {e}")
+            logger.warning(f"Vertex AI Copilot error: {e}")
 
     if not reply_text:
-        curr_slide_key = f"slide_{getattr(req, 'current_slide_index', 0) + 1}"
-        s_data = active_deck_slides.get(curr_slide_key, active_deck_slides.get("slide_1"))
-        reply_text = f"Slide {getattr(req, 'current_slide_index', 0) + 1} ({s_data.get('title')}): Grounded analysis active for {client_name}."
+        reply_text = f"I am ready to assist with {client_name}'s {p_family} pitchbook. You can ask me to explain any slide, modify financial parameters, or run a regulatory compliance check."
 
+    normalized_overrides = normalize_copilot_overrides(merged_overrides)
     return {
         "reply": reply_text,
         "client_id": cid,
-        "overrides": merged_overrides,
+        "overrides": normalized_overrides,
         "timestamp": datetime.now().strftime("%H:%M:%S")
     }
+
 
 
 @app.post("/api/pitchbook/generate")

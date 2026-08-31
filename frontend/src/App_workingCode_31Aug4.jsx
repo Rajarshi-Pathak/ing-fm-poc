@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
   ArrowUpRight, 
   ShieldAlert, 
@@ -136,20 +136,8 @@ class ErrorBoundary extends React.Component {
 // Main App Component
 // =============================================================================
 
-// Whitelisted Client IDs for UI presentation (Backend DB retains all clients)
-const ACTIVE_UI_CLIENT_IDS = ["CLI101"]; // Add "CLI102" tomorrow for ASML as ["CLI101", "CLI102"];
-
 export default function App() {
   const [opportunities, setOpportunities] = useState([]);
-
-  // Filter for UI display without altering underlying database records
-  const displayedOpportunities = useMemo(() => {
-    return opportunities.filter(o => 
-      ACTIVE_UI_CLIENT_IDS.includes(o.client_id) || 
-      ACTIVE_UI_CLIENT_IDS.includes(o.id) || 
-      (o.name && o.name.includes("Enel"))
-    );
-  }, [opportunities]);
   const [signals, setSignals] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [loadingClient, setLoadingClient] = useState(null);
@@ -349,32 +337,23 @@ export default function App() {
     }
   };
 
-    const handleOpenPreview = async (opp) => {
-    // Reset overrides to prevent cross-client state pollution
-    setDeckOverrides({
-      market_date: `Market Snapshot as of ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} `
-    });
+  const handleOpenPreview = async (opp) => {
     setActiveClient(opp);
     setCurrentSlideIndex(0);
     setComplianceResult(null);
     setFlaggedSlides([]);
+    
+    setDeckOverrides(prev => ({
+      ...prev,
+      market_date: `Market Snapshot as of ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} `
+    }));
+    
     setPreviewOpen(true);
-
-    const targetId = opp.client_id || opp.id || "CLI101";
-    try {
-      const bRes = await fetch(`/api/client/${targetId}/pitchbook-bundle`);
-      if (bRes.ok) {
-        const bData = await bRes.json();
-        setActiveClient(prev => ({ ...prev, ...bData }));
-      }
-    } catch (e) {
-      console.error("Failed to load full bundle:", e);
-    }
     
     setChatMessages([
       {
         sender: "bot",
-        text: `Hello! I am your Origination Copilot for **${opp.name}**.\n\nYou can ask questions, run regulatory audits, or instruct me to adjust parameters:\n• **"Run MiFID II & EMIR compliance check"**\n• **"In Slide 7, update iTraxx Main to 60 bps"**\n• **"In Slide 6, change rate to 4.50% instead of 4.55%"**\n• **"Adjust bond sizing to €800M and tenor to 10Y"**`,
+        text: `Hello! I am your Origination Copilot for **${opp.name}**.\n\nYou can ask questions, run regulatory audits, or instruct me to adjust parameters:\n• **"Run FINRA & MiFID II compliance check"**\n• **"In Slide 7, update iTraxx Main to 60 bps"**\n• **"In Slide 6, change rate to 4.50% instead of 4.55%"**\n• **"Adjust bond sizing to €800M and tenor to 10Y"**`,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       }
     ]);
@@ -389,60 +368,13 @@ export default function App() {
     }
   };
 
-  const handleDownloadDeck = async (clientId) => {
-    const cid = clientId || activeClient?.id || "CLI101";
-    setLoadingClient(cid);
-    try {
-      const response = await fetch("/api/pitchbook/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: cid,
-          overrides: {
-            ...deckOverrides,
-            client_name: activeClient?.name || activeClient?.client_name,
-            rm_name: deckOverrides.rm_name || activeClient?.rm_name,
-            product_family: activeClient?.opportunity_type?.includes("FX") ? "FX_HEDGE" :
-                            activeClient?.opportunity_type?.includes("Rate") || activeClient?.name?.includes("BASF") ? "RATES_HEDGE" :
-                            activeClient?.opportunity_type?.includes("Green") || activeClient?.name?.includes("Enel") ? "GREEN_ESG" : "DCM_REFI",
-            revenue_str: deckOverrides.revenue_str || (activeClient?.revenue_eur_m ? `€${Number(activeClient.revenue_eur_m).toLocaleString()}M` : undefined),
-            ebitda_str: deckOverrides.ebitda_str || (activeClient?.ebitda_eur_m ? `€${Number(activeClient.ebitda_eur_m).toLocaleString()}M` : undefined),
-            net_debt_str: deckOverrides.net_debt_str || (activeClient?.net_debt ? `€${(activeClient.net_debt/1000).toFixed(1)}B` : undefined),
-            liquidity_str: deckOverrides.liquidity_str || (activeClient?.liquidity ? `€${(activeClient.liquidity/1000).toFixed(1)}B` : undefined),
-          }
-        })
-      });
-
-      if (!response.ok) {
-        // Direct fallback to download endpoint
-        window.location.href = `/api/pitchbook/download?client_id=${encodeURIComponent(cid)}`;
-        return;
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `ING_${cid}_Pitchbook.pptx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PPT download fallback:", err);
-      window.location.href = `/api/pitchbook/download?client_id=${encodeURIComponent(cid)}`;
-    } finally {
-      setLoadingClient(null);
-    }
-  };
-
   const handleRunComplianceAudit = async () => {
     if (!activeClient || complianceAuditing) return;
     setComplianceAuditing(true);
 
     const auditUserMsg = {
       sender: "user",
-      text: "Run MiFID II & EU Regulatory Compliance Audit on entire pitchbook",
+      text: "Run FINRA Rule 2210 & MiFID II compliance audit on entire pitchbook",
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     };
     setChatMessages(prev => [...prev, auditUserMsg]);
@@ -491,49 +423,57 @@ export default function App() {
 
   const handleApplyRemediations = async (remediesObj) => {
     if (!activeClient) return;
+    const activeClientId = activeClient.id || activeClient.client_id || "CLI102";
     const clientName = activeClient.name || activeClient.client_name || "Corporate Client";
-    const remedies = remediesObj || complianceResult?.recommended_overrides || {
-      caveat: "MiFID II Art. 24(4) Notice: Indicative pricing and spreads are non-binding, subject to internal credit sanction, final allocation, and market conditions at execution.",
-      disclaimers: [
-        "FOR PROFESSIONAL CLIENTS AND ELIGIBLE COUNTERPARTIES ONLY — No retail distribution under MiFID II Art. 24.",
-        "Indicative terms and pricing are non-binding and subject to market volatility and final credit approval.",
-        "Regulatory standards certified under MiFID II, EMIR Refit, and ICMA Green Bond Principles."
-      ]
-    };
-
-    // Apply live overrides to slides
-    setDeckOverrides(prev => ({ ...prev, ...remedies }));
-    setFlaggedSlides([]);
-    setComplianceResult({ compliant: true, overall_risk_assessment: "LOW" });
-
-    const replyText = `✅ **Pitchbook Remediated & Certified for ${clientName}:**
-
-• **MiFID II Art. 24**: Proximate non-binding indicative pricing caveats attached to Term Sheet (Slide 8).
-• **Investor Protection**: Professional Clients & Eligible Counterparties target market locked (Slide 10).
-• **Regulatory Standard**: ICMA / EMIR Refit disclosure certified.
-
-*All 10 slides in the preview canvas and export deck are now 100% compliant.*`;
-
-    setChatMessages(prev => [
-      ...prev,
-      {
-        sender: "user",
-        text: "Apply compliance recommendations",
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      },
-      {
-        sender: "bot",
-        text: replyText,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: activeClientId,
+          prompt: "Apply compliance recommendations and certify full deck",
+          history: chatMessages.map(m => ({ role: m.sender === "bot" ? "assistant" : "user", text: m.text })),
+          overrides: deckOverrides
+        })
+      });
+      const data = await res.json();
+      
+      if (data.overrides) {
+        setDeckOverrides(prev => ({ ...prev, ...data.overrides }));
       }
-    ]);
+      setFlaggedSlides([]);
+      setComplianceResult({ compliant: true, overall_risk_assessment: "LOW" });
+
+      const replyText = data.reply || `✅ **Pitchbook Remediated & Certified for ${clientName}:**
+
+• **Market Capture & Timestamps**: Verified as of current market close.
+• **Indicative Terms & Sizing**: Qualified with non-binding execution caveats.
+• **Regulatory Disclosures**: MiFID II, EMIR, and Target Market notices active.
+
+*All 10 slides in the preview canvas and PowerPoint deck are now 100% compliant.*`;
+
+      setChatMessages(prev => [
+        ...prev,
+        {
+          sender: "user",
+          text: "Apply compliance recommendations",
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        },
+        {
+          sender: "bot",
+          text: replyText,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        }
+      ]);
+    } catch (err) {
+      console.error("Compliance remediation call failed:", err);
+    }
   };
 
-  // Dynamic Product Family Detector
-
-  const handleSendMessage = async (queryText) => {
-    const textToSend = (typeof queryText === "string" ? queryText : inputQuery || "").trim();
-    if (!textToSend || !activeClient || copilotLoading) return;
+  const handleSendMessage = useCallback(async (queryText) => {
+    const textToSend = queryText || inputQuery;
+    if (!textToSend.trim() || !activeClient) return;
 
     if (textToSend.toLowerCase().includes("compliance") && textToSend.toLowerCase().includes("check")) {
       handleRunComplianceAudit();
@@ -563,73 +503,97 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_id: activeClient.id || activeClient.client_id || "CLI101",
+          client_id: activeClient.id,
           prompt: textToSend,
           history: updatedHistory,
-          current_overrides: deckOverrides || {},
-          current_slide_index: (typeof currentSlideIndex === "number" ? currentSlideIndex : 0)
+          current_overrides: deckOverrides
         })
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
       const data = await res.json();
-      if (data.overrides && Object.keys(data.overrides).length > 0) {
+      
+      if (data.overrides) {
         setDeckOverrides(prev => ({ ...prev, ...data.overrides }));
+        if (textToSend.toLowerCase().includes("remediat") || textToSend.toLowerCase().includes("compliance")) {
+          setFlaggedSlides([]);
+          setComplianceResult({ compliant: true, overall_risk_assessment: "LOW" });
+        }
       }
 
       setChatMessages(prev => [
         ...prev,
         {
           sender: "bot",
-          text: data.reply || "Grounded pitchbook analysis updated.",
+          text: data.reply || "I have processed your request. How can I assist further?",
           time: data.timestamp || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         }
       ]);
-    } catch (err) {
-      console.error("Copilot chat error:", err);
+    } catch (e) {
+      console.error("Copilot error:", e);
       setChatMessages(prev => [
         ...prev,
         {
           sender: "bot",
-          text: "⚠️ Copilot service encountered a temporary error. Please retry.",
+          text: "⚠️ Error communicating with the AI Copilot. Please check service connection.",
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         }
       ]);
     } finally {
       setCopilotLoading(false);
     }
+  }, [activeClient, chatMessages, deckOverrides, inputQuery]);
+
+  const handleDownloadDeck = async (clientId) => {
+    setLoadingClient(clientId);
+    try {
+      const response = await fetch("/api/pitchbook/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          overrides: {
+            ...deckOverrides,
+            client_name: activeClient?.name || activeClient?.client_name,
+            rm_name: deckOverrides.rm_name || activeClient?.rm_name,
+            product_family: activeClient?.opportunity_type?.includes("FX") ? "FX_HEDGE" :
+                            activeClient?.opportunity_type?.includes("Rate") || activeClient?.name?.includes("BASF") ? "RATES_HEDGE" :
+                            activeClient?.opportunity_type?.includes("Green") || activeClient?.name?.includes("Enel") ? "GREEN_ESG" : "DCM_REFI",
+            revenue_str: deckOverrides.revenue_str || (activeClient?.revenue_eur_m ? `€${Number(activeClient.revenue_eur_m).toLocaleString()}M` : undefined),
+            ebitda_str: deckOverrides.ebitda_str || (activeClient?.ebitda_eur_m ? `€${Number(activeClient.ebitda_eur_m).toLocaleString()}M` : undefined),
+            net_debt_str: deckOverrides.net_debt_str || (activeClient?.net_debt ? `€${(activeClient.net_debt/1000).toFixed(1)}B` : undefined),
+            liquidity_str: deckOverrides.liquidity_str || (activeClient?.liquidity ? `€${(activeClient.liquidity/1000).toFixed(1)}B` : undefined),
+          }
+        })
+      });
+      
+      if (!response.ok) throw new Error("Failed to generate deck");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ING_${clientId}_Pitchbook.pptx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+      alert("Error downloading pitchbook. Please retry.");
+    } finally {
+      setLoadingClient(null);
+    }
   };
-
-const getProductFamily = (opp) => {
-  if (!opp) return { isFX: false, isGreen: false, isRates: false, isDCM: true, pFamily: "DCM_REFI" };
-  
-  const textCorpus = [
-    opp.product_family, opp.opportunity_type, opp.type, opp.catalog_family,
-    opp.title, opp.catalyst, opp.trigger_summary, opp.trigger,
-    opp.next_best_action, opp.action, opp.suggested_action,
-    opp.why_now, opp.cf_description, opp.cf_latent, opp.callout,
-    opp.kicker, opp.subtitle, opp.description, opp.headline, opp.summary,
-    opp.name, opp.client_name
-  ].filter(Boolean).join(" ").toLowerCase();
-
-  const cName = (opp.name || opp.client_name || "").toLowerCase();
-
-  const isGreen = textCorpus.includes("green") || textCorpus.includes("sustainability") || textCorpus.includes("sustainable") || textCorpus.includes("taxonomy") || textCorpus.includes("esg") || textCorpus.includes("decarbon") || cName.includes("enel");
-  const isFX = !isGreen && (textCorpus.includes("fx") || textCorpus.includes("currency") || textCorpus.includes("collar") || cName.includes("asml"));
-  const isRates = !isGreen && !isFX && (textCorpus.includes("irs") || textCorpus.includes("pre-hedge") || textCorpus.includes("swap") || textCorpus.includes("rate risk") || cName.includes("basf"));
-  const isDCM = !isGreen && !isFX && !isRates;
-  const pFamily = isGreen ? "GREEN_ESG" : isFX ? "FX_HEDGE" : isRates ? "RATES_HEDGE" : "DCM_REFI";
-
-  return { isFX, isGreen, isRates, isDCM, pFamily };
-};
 
   const getSlideContent = (index, opp) => {
     if (!opp) return null;
     const clientName = deckOverrides.client_name || opp.name || opp.client_name || "Corporate Client";
-    const { isFX, isGreen, isRates, isDCM, pFamily } = getProductFamily(opp);
+    const pType = (opp.opportunity_type || opp.type || opp.product_family || "").toLowerCase();
+    const cName = (clientName + " " + (opp.client_id || "")).toLowerCase();
+    const isFX = pType.includes("fx") || pType.includes("currency") || cName.includes("asml") || cName.includes("cli102");
+    const isGreen = pType.includes("green") || pType.includes("sustainable") || cName.includes("enel") || cName.includes("cli101");
+    const isRates = pType.includes("rate") || pType.includes("irs") || cName.includes("basf") || cName.includes("cli103");
+    const pFamily = isFX ? "FX_HEDGE" : isGreen ? "GREEN_ESG" : isRates ? "RATES_HEDGE" : "DCM_REFI";
 
     // Client and Product-Aware Defaults from Database
     const defaultNetDebt = isGreen ? "€58,500M" : isRates ? "€16,200M" : "€3,192M";
@@ -645,22 +609,20 @@ const getProductFamily = (opp) => {
     const ebitdaVal = deckOverrides.ebitda_str || deckOverrides.ebitda || opp.ebitda_str || (opp.ebitda_eur_m ? `€${Number(opp.ebitda_eur_m).toLocaleString()}M` : defaultEbitda);
     const maturityVal = deckOverrides.maturity_wall_str || deckOverrides.maturity_wall || opp.debt_maturing_24m_str || defaultMatWall;
     const unhedgedGapVal = deckOverrides.unhedged_gap_str || deckOverrides.unhedged_gap || deckOverrides.unhedged_usd_commercial_gap || "$8.0B";
-    let rawTier = deckOverrides.tier || deckOverrides.rating || opp.tier || "Tier 1 (Investment Grade)";
-    const tierVal = (rawTier === "Tier 1" || rawTier === "Tier 1 ") ? "Tier 1 (Investment Grade)" : rawTier;
+    const tierVal = deckOverrides.tier || deckOverrides.rating || opp.tier || "Tier 1 (Investment Grade)";
     const rmName = deckOverrides.rm_name || opp.rm_name || defaultRM;
 
     const kickerText = deckOverrides.kicker || (
-       isGreen ? "SUSTAINABLE & ESG CAPITAL STRUCTURING" :
-       isFX ? "FX & COMMODITY RISK ADVISORY" :
-       isRates ? "RATES RISK & LIABILITY MANAGEMENT" : "DCM CAPITAL STRUCTURING"
-     );
+      isFX ? "FX & COMMODITY RISK ADVISORY" :
+      isGreen ? "SUSTAINABLE & ESG CAPITAL STRUCTURING" :
+      isRates ? "RATES RISK & LIABILITY MANAGEMENT" : "DCM CAPITAL STRUCTURING"
+    );
 
-     const subtitleText = deckOverrides.subtitle || (
-       isGreen ? "Inaugural Hybrid Green Bond & Sustainability Framework" :
-       isFX ? "Strategic FX Exposure Risk & Layered Hedging Programme" :
-       isRates ? "Pre-Hedge Swap Overlay & Rate Sensitivity Immunisation" :
-       "Refinancing & Capital Markets Execution Framework"
-     );
+    const subtitleText = deckOverrides.subtitle || (
+      isFX ? "Strategic FX Exposure Risk & Layered Hedging Programme" :
+      isGreen ? "Inaugural Hybrid Green Bond & Sustainability Framework" :
+      isRates ? "Pre-Hedge Swap Overlay & Rate Sensitivity Immunisation" : "Refinancing & Capital Markets Execution Framework"
+    );
 
     switch (index) {
       case 0: // COVER
@@ -831,7 +793,7 @@ const getProductFamily = (opp) => {
                 </div>
                 <div className="p-2.5 bg-gray-50 rounded border border-gray-200">
                   <p className="text-[10px] text-gray-500 font-semibold">{isFX ? "Unhedged FX Gap" : isGreen ? "Eligible Green CapEx" : "24M Maturity Wall"}</p>
-                  <p className="text-sm font-bold text-orange-600 mt-0.5">{isFX ? unhedgedGapVal : isGreen ? (deckOverrides.unhedged_gap_str || deckOverrides.capex || "€3.5B") : maturityVal}</p>
+                  <p className="text-sm font-bold text-orange-600 mt-0.5">{isFX ? unhedgedGapVal : isGreen ? "€3.5B" : maturityVal}</p>
                 </div>
                 <div className="p-2.5 bg-gray-50 rounded border border-gray-200">
                   <p className="text-[10px] text-gray-500 font-semibold">Credit Rating / Tier</p>
@@ -1065,24 +1027,24 @@ const getProductFamily = (opp) => {
                 </div>
                 <img src="/assets/ing_logo_orange.png" alt="ING" className="h-6 object-contain" />
               </div>
-                <div className="grid grid-cols-4 gap-2.5 text-center mb-2">
-                  <div className="p-2 bg-gray-50 rounded border border-gray-200">
-                    <p className="text-[9px] text-gray-500 font-semibold">{isFX ? "EUR/USD Spot" : isGreen ? "EUR Green Spread" : "5Y EUR Swap"}</p>
-                    <p className="text-xs font-bold text-[#000066] mt-0.5">{isFX ? (deckOverrides.spot_fx || "1.0650") : isGreen ? (deckOverrides.eur_green_spread || deckOverrides.spread || "77 bps") : (deckOverrides.swap_5y || "2.62%")}</p>
-                  </div>
-                  <div className="p-2 bg-gray-50 rounded border border-gray-200">
-                    <p className="text-[9px] text-gray-500 font-semibold">{isFX ? "12M Forward Pts" : isGreen ? "Greenium Concession" : "10Y Bund"}</p>
-                    <p className="text-xs font-bold text-gray-900 mt-0.5">{isFX ? (deckOverrides.forward_points || "+185 pts") : isGreen ? (deckOverrides.greenium_concession || "-5 bps") : (deckOverrides.bund_10y || "2.61%")}</p>
-                  </div>
-                  <div className="p-2 bg-gray-50 rounded border border-gray-200">
-                    <p className="text-[9px] text-gray-500 font-semibold">ECB Refi Rate</p>
-                    <p className="text-xs font-bold text-orange-600 mt-0.5">{deckOverrides.ecb_rate || deckOverrides.ecb_refi_rate || "2.25%"}</p>
-                  </div>
-                  <div className="p-2 bg-gray-50 rounded border border-gray-200">
-                    <p className="text-[9px] text-gray-500 font-semibold">{isFX ? "Fed Funds Target" : "iTraxx Main"}</p>
-                    <p className="text-xs font-bold text-emerald-700 mt-0.5">{isFX ? (deckOverrides.fed_rate || "4.00–4.25%") : (deckOverrides.itraxx_main || deckOverrides.itraxx || "58 bps")}</p>
-                  </div>
+              <div className="grid grid-cols-4 gap-2.5 text-center mb-2">
+                <div className="p-2 bg-gray-50 rounded border border-gray-200">
+                  <p className="text-[9px] text-gray-500 font-semibold">{isFX ? "EUR/USD Spot" : isGreen ? "EUR Green Spread" : "5Y EUR Swap"}</p>
+                  <p className="text-xs font-bold text-[#000066] mt-0.5">{isFX ? (deckOverrides.spot_fx || "1.0650") : isGreen ? "77 bps" : (deckOverrides.swap_5y || "2.62%")}</p>
                 </div>
+                <div className="p-2 bg-gray-50 rounded border border-gray-200">
+                  <p className="text-[9px] text-gray-500 font-semibold">{isFX ? "12M Forward Pts" : isGreen ? "Greenium Concession" : "10Y Bund"}</p>
+                  <p className="text-xs font-bold text-gray-900 mt-0.5">{isFX ? (deckOverrides.forward_points || "+185 pts") : isGreen ? "-5 bps" : (deckOverrides.bund_10y || "2.61%")}</p>
+                </div>
+                <div className="p-2 bg-gray-50 rounded border border-gray-200">
+                  <p className="text-[9px] text-gray-500 font-semibold">ECB Refi Rate</p>
+                  <p className="text-xs font-bold text-orange-600 mt-0.5">{deckOverrides.ecb_rate || "2.25%"}</p>
+                </div>
+                <div className="p-2 bg-gray-50 rounded border border-gray-200">
+                  <p className="text-[9px] text-gray-500 font-semibold">{isFX ? "Fed Funds Target" : "iTraxx Main"}</p>
+                  <p className="text-xs font-bold text-emerald-700 mt-0.5">{isFX ? (deckOverrides.fed_rate || "4.00–4.25%") : (deckOverrides.itraxx_main || "58 bps")}</p>
+                </div>
+              </div>
               <div className="p-3 bg-blue-50/40 rounded border border-blue-100 text-[10px] text-gray-700 space-y-1">
                 <p className="font-bold text-[#000066]">Macro & Market Context</p>
                 <p>• Central Bank Policy: ECB Refinancing Rate at {deckOverrides.ecb_rate || "2.25%"}; Fed Funds Target at {deckOverrides.fed_rate || "4.00–4.25%"}.</p>
@@ -1212,7 +1174,7 @@ const getProductFamily = (opp) => {
                   </table>
                 </div>
                 <p className="text-[8.5px] italic text-slate-500 mt-2">
-                  {deckOverrides?.caveat || deckOverrides?.term_sheet_caveat || "Indicative terms for discussion purposes only. Subject to internal credit approvals, KYC/AML, and market conditions at pricing."}
+                  Indicative terms for discussion purposes only. Subject to internal credit approvals, KYC/AML, and market conditions at pricing.
                 </p>
               </div>
               <div className="text-center text-[9px] text-gray-400 border-t border-gray-100 pt-1.5">ING Wholesale Banking • Strictly Confidential</div>
@@ -1285,11 +1247,7 @@ const getProductFamily = (opp) => {
                 <img src="/assets/ing_logo_orange.png" alt="ING" className="h-6 object-contain" />
               </div>
               <div className="bg-gray-50 p-3 rounded border border-gray-200 text-[9px] space-y-1.5 text-gray-600">
-                {(deckOverrides.disclaimers || [
-                    "This document is prepared for illustrative and discussion purposes only and does not constitute an offer, solicitation, or recommendation.",
-                    "Target market under MiFID II / UK MiFIR: Eligible counterparties and professional clients only.",
-                    "All rates, levels, spreads, and indicative terms shown are subject to change without notice and are not tradeable prices."
-                  ]).map((disc, idx) => (
+                {deckOverrides.disclaimers.map((disc, idx) => (
                   <p key={idx} className="leading-relaxed"><strong className="text-gray-900">•</strong> {disc}</p>
                 ))}
               </div>
@@ -1305,11 +1263,15 @@ const getProductFamily = (opp) => {
 
   const getDynamicSlideTitles = (opp) => {
     if (!opp) return [
-      "01. Cover Slide", "02. Strategic Catalyst", "03. Executive Summary",
-      "04. Balance Sheet", "05. Exposure / Maturity", "06. Sensitivity Analysis",
+      "01. Cover Slide", "02. Strategic Catalyst", "03. Executive Summary", 
+      "04. Balance Sheet", "05. Exposure / Maturity", "06. Sensitivity Analysis", 
       "07. Market Backdrop", "08. Term Sheet", "09. Execution Roadmap", "10. Disclosures"
     ];
-    const { isFX, isGreen, isRates } = getProductFamily(opp);
+    const pType = (opp.opportunity_type || opp.type || opp.product_family || "").toLowerCase();
+    const cName = (opp.name || opp.client_name || "").toLowerCase();
+    const isFX = pType.includes("fx") || pType.includes("currency") || cName.includes("asml");
+    const isGreen = pType.includes("green") || pType.includes("sustainable") || cName.includes("enel");
+    const isRates = pType.includes("rate") || pType.includes("irs") || cName.includes("basf");
 
     if (isFX) {
       return [
@@ -1395,10 +1357,10 @@ const getProductFamily = (opp) => {
               </button>
               <div className="text-right text-xs text-gray-500 leading-tight">
                 <span className="font-semibold text-gray-700">
-                  {new Date().toLocaleDateString("en-US", { timeZone: "Europe/Amsterdam", weekday: "short", day: "numeric", month: "short" })}
+                  {new Date().toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
                 <br />
-                {new Date().toLocaleTimeString("en-US", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" })} CET
+                {new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} CET
               </div>
               <div className="w-9 h-9 rounded-full bg-[#0C112B] text-white flex items-center justify-center font-bold text-xs tracking-wider">
                 SB
@@ -1477,7 +1439,7 @@ const getProductFamily = (opp) => {
                 Today's Cohort Matches
               </p>
               <h1 className="text-3xl font-serif font-bold text-[#0C112B] mb-2">
-                {displayedOpportunities.length} {displayedOpportunities.length === 1 ? 'opportunity surfaced' : 'opportunities surfaced'}
+                {opportunities.length} opportunities surfaced
               </h1>
               <p className="text-sm text-gray-600 leading-relaxed">
                 Each match combines live market rates curves and internal corporate debt schedules from database into pre-drafted pitchbooks.
@@ -1485,8 +1447,8 @@ const getProductFamily = (opp) => {
             </div>
 
             <div className="space-y-6">
-              {displayedOpportunities.length > 0 ? (
-                displayedOpportunities.map((opp) => {
+              {opportunities.length > 0 ? (
+                opportunities.map((opp) => {
                   const isDebt = opp.is_debt;
 
                   return (
@@ -1502,7 +1464,7 @@ const getProductFamily = (opp) => {
                               : "bg-emerald-50 text-emerald-800"
                           }`}
                         >
-                          OPPORTUNITY: {opp.type}
+                          {opp.type}
                         </span>
                         <div className="text-right">
                           <p className="text-[10px] text-gray-400 font-medium">Match confidence</p>
@@ -1521,7 +1483,7 @@ const getProductFamily = (opp) => {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-gray-200">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase">
-                                  Client Data
+                                  Segment 1: Client Data
                                 </span>
                                 <span className="text-[9px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.2 rounded">Static</span>
                               </div>
@@ -1555,7 +1517,7 @@ const getProductFamily = (opp) => {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-gray-200">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase">
-                                  Market Data
+                                  Segment 2: Market Data
                                 </span>
                                 <span className="text-[9px] bg-purple-100 text-purple-800 font-bold px-1.5 py-0.2 rounded">Market DB</span>
                               </div>
@@ -1589,7 +1551,7 @@ const getProductFamily = (opp) => {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-blue-100">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase flex items-center gap-1">
-                                  <span>🧠</span> Context Fabric
+                                  <span>🧠</span> Segment 3: Context Fabric
                                 </span>
                                 <span className="text-[9px] bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.5 rounded border border-blue-200">Fabric AI</span>
                               </div>
@@ -1639,9 +1601,9 @@ const getProductFamily = (opp) => {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-orange-200/70">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#FF6200] uppercase flex items-center gap-1">
-                                  <span>⚡</span> Mandate
+                                  <span>⚡</span> Segment 4: Mandate
                                 </span>
-                                <span className="text-[9px] bg-[#FFF0E6] text-[#FF6200] font-extrabold px-1.5 py-0.5 rounded border border-orange-200">AI Synthesis</span>
+                                <span className="text-[9px] bg-[#FFF0E6] text-[#FF6200] font-extrabold px-1.5 py-0.5 rounded border border-orange-200">LLM Synthesis</span>
                               </div>
 
                               <div className="space-y-1.5 text-[10.5px]">
@@ -1723,8 +1685,8 @@ const getProductFamily = (opp) => {
               {metrics ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white border border-gray-200 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-gray-900">{displayedOpportunities.length || 1}</p>
-                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">▲ {displayedOpportunities.length || 1}</p>
+                    <p className="text-2xl font-bold text-gray-900">{metrics.active_drafts?.value || 0}</p>
+                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">{metrics.active_drafts?.change || "+12%"}</p>
                     <p className="text-xs text-gray-500 leading-tight">{metrics.active_drafts?.label || "Active drafts in progress"}</p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -1733,13 +1695,13 @@ const getProductFamily = (opp) => {
                     <p className="text-xs text-gray-500 leading-tight">{metrics.avg_time?.label || "Avg. time to first draft"}</p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-gray-900">{displayedOpportunities.length || 1}</p>
+                    <p className="text-2xl font-bold text-gray-900">{metrics.pending_review?.value || 11}</p>
                     <p className="text-[11px] font-semibold text-gray-400 mb-1">{metrics.pending_review?.change || "steady"}</p>
                     <p className="text-xs text-gray-500 leading-tight">{metrics.pending_review?.label || "Deals pending review"}</p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-gray-900">{displayedOpportunities.length || 1}</p>
-                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">▲ {displayedOpportunities.length || 1}</p>
+                    <p className="text-2xl font-bold text-gray-900">{metrics.cohort_matches?.value || 6}</p>
+                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">{metrics.cohort_matches?.change || "+2 this week"}</p>
                     <p className="text-xs text-gray-500 leading-tight">{metrics.cohort_matches?.label || "Cohort matches this month"}</p>
                   </div>
                 </div>
@@ -1757,7 +1719,7 @@ const getProductFamily = (opp) => {
               </p>
               {metrics?.priorities && metrics.priorities.length > 0 ? (
                 <div className="space-y-3">
-                  {metrics.priorities.filter(item => ACTIVE_UI_CLIENT_IDS.includes(item.client_id) || ACTIVE_UI_CLIENT_IDS.includes(item.id) || (item.title && item.title.toLowerCase().includes("enel"))).map((item, idx) => (
+                  {metrics.priorities.map((item, idx) => (
                     <div 
                       key={idx} 
                       onClick={() => {
@@ -2049,8 +2011,9 @@ const getProductFamily = (opp) => {
 ` +
                             `Author: Luca Moretti (DCM Origination)
 ` +
-                            `Reconciliation: Public materials show recent capital markets access, but capex should not be equated with funding gap. ` +
-                            `Residual 2026-2027 debt maturities remain at sizable volume. Candidate issue: residual funding sequencing and liability management with senior benchmark tranche.`
+                            `Signal: Public disclosures show recent bond issuance, but capex expansion cannot be fully self-funded. Sizable residual debt maturities remain across the 24M horizon.
+` +
+                            `Latent Opportunity: Structure an indicative EUR 1.5B dual-tranche Senior EMTN benchmark with liability management tender offer to smooth the debt maturity profile.`
                           )}
                           className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] hover:shadow-xs text-left transition group"
                         >
@@ -2071,8 +2034,9 @@ const getProductFamily = (opp) => {
 ` +
                             `Author: Roman Weiss (Rates Structuring)
 ` +
-                            `Signal: Executive Committee authorized accelerated debt rollover. Mandate requires EUR 2.0B Senior EMTN benchmark with immediate ` +
-                            `EUR 1.2B 6Y Fixed-to-Floating IRS pre-hedge to capture favorable swap rates ahead of ECB policy cycle.`
+                            `Signal: Executive Committee authorized accelerated debt rollover ahead of upcoming policy rate decisions.
+` +
+                            `Latent Opportunity: Immediate EUR 1.2B 6Y Fixed-to-Floating IRS forward pre-hedge to lock 5Y swap yields at 2.62% and secure 14 bps spread savings.`
                           )}
                           className="p-2.5 rounded-lg border border-blue-200 bg-white hover:border-[#000066] hover:shadow-xs text-left transition group"
                         >
@@ -2082,7 +2046,7 @@ const getProductFamily = (opp) => {
                           <p className="text-[10px] text-gray-500 leading-tight">Lock spread savings and interest rate swap overlay ahead of rate cycle</p>
                         </button>
 
-                        {/* 3. Sustainable Finance Framework */}
+                        {/* 3. Sustainable Finance Mandate */}
                         <button
                           onClick={() => setCustomTextContent(
                             `WORKFABRIC SUSTAINABLE FINANCE MEMO:
@@ -2093,8 +2057,9 @@ const getProductFamily = (opp) => {
 ` +
                             `Author: Marta Nowak (ESG Structuring Lead)
 ` +
-                            `Framework: Verified ICMA Green Bond Principles & EU Taxonomy alignment. Ring-fenced €1.5B eligible clean energy asset pool. ` +
-                            `Recommended structure: Inaugural €750M 8Y Green EMTN with 3-7 bps new issue greenium advantage.`
+                            `Signal: Ring-fenced EUR 1.5B eligible clean transition asset pool verified under ICMA Green Bond Principles with SPO.
+` +
+                            `Latent Opportunity: Inaugural EUR 750M 8Y Green EMTN benchmark capturing 3-7 bps greenium new-issue concession advantage.`
                           )}
                           className="p-2.5 rounded-lg border border-emerald-200 bg-white hover:border-emerald-600 hover:shadow-xs text-left transition group"
                         >
@@ -2115,8 +2080,9 @@ const getProductFamily = (opp) => {
 ` +
                             `Author: Sector FX Specialist Desk
 ` +
-                            `Exposure: Addressing unhedged USD commercial revenue expansion. Recommend multi-tenor layered corridors with ` +
-                            `rolling 12M–24M zero-cost participating collars protecting group gross operating margin.`
+                            `Signal: Commercial expansion outside EUR created unhedged USD cash flow exposure impacting gross margins.
+` +
+                            `Latent Opportunity: Layered 12M-24M zero-cost participating FX collar corridors protecting group EBITDA while retaining upside participation.`
                           )}
                           className="p-2.5 rounded-lg border border-amber-200 bg-white hover:border-[#FF6200] hover:shadow-xs text-left transition group"
                         >
@@ -2126,7 +2092,6 @@ const getProductFamily = (opp) => {
                           <p className="text-[10px] text-gray-500 leading-tight">Layered participating FX collars protecting group EBITDA margin</p>
                         </button>
                       </div>
-
                       <div>
                         <label className="block text-gray-700 font-bold mb-1.5 text-xs">WorkFabric Context Memo Content:</label>
                         <textarea
@@ -2184,7 +2149,7 @@ const getProductFamily = (opp) => {
                         ? "bg-amber-50 text-amber-900 border-amber-300 ring-1 ring-amber-300"
                         : "bg-white hover:bg-gray-50 text-[#000066] border-gray-300"
                     } disabled:opacity-50`}
-                    title="Perform full-deck MiFID II Art. 24 & MiFID II inspection"
+                    title="Perform full-deck FINRA 2210 & MiFID II inspection"
                   >
                     {complianceAuditing ? (
                       <>

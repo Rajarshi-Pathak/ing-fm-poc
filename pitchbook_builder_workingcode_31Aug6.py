@@ -529,7 +529,7 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     tenor_str = ov.get("tenor", "7 Years (T + 7Y)")
     spread_str = ov.get("spread", "Mid-Swap + 82 bps")
     notional_str = ov.get("notional_bond", "EUR 600,000,000")
-    spread_disc = ov.get("caveat") or ov.get("spread_disclaimer") or "*Indicative pricing subject to market conditions, bookbuilding depth, and credit approval.*"
+    spread_disc = ov.get("spread_disclaimer", "*Indicative pricing subject to market conditions, bookbuilding depth, and credit approval.*")
 
     # -------- Scenario Values (with overrides) --------
     scen_up = ov.get("rate_scenario_up", "4.55%")
@@ -545,9 +545,9 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
 
     unhedged_gap = ov.get("unhedged_gap_str", ov.get("unhedged_gap", "N/A"))
 
-    # -------- Get Product-Specific Content (with Overrides) --------
-    kicker = ov.get("kicker") or get_product_kicker(p_fam)
-    subtitle = ov.get("subtitle") or get_product_subtitle(p_fam)
+    # -------- Get Product-Specific Content --------
+    kicker = get_product_kicker(p_fam)
+    subtitle = get_product_subtitle(p_fam)
     pillars = get_product_pillars(p_fam, ctx, ov)
     
     # -------- Build Trigger Cards --------
@@ -701,13 +701,12 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
         p_b.space_before = Pt(6)
 
         # =========================================================================
-        # SLIDE 3: EXECUTIVE SUMMARY
+    # SLIDE 3: EXECUTIVE SUMMARY (Exact Parity with Preview Canvas)
+    # =========================================================================
     s3 = prs.slides.add_slide(blank)
-    add_header(s3, ov.get("exec_title") or sm.get("s3_ttl", "Executive Summary & Transaction Rationale"), category="EXECUTIVE SUMMARY")
     add_logo(s3)
     add_footer(s3)
 
-    custom_exec = ov.get("exec_summary") or ov.get("executive_summary")
     # 1. Left Orange Hero Panel
     hero_panel = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(4.8), Inches(7.5))
     hero_panel.fill.solid()
@@ -1204,7 +1203,6 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     rp_body.space_before = Pt(4)
 
     # =========================================================================
-    # =========================================================================
     # SLIDE 7: MARKET INTELLIGENCE (Exact Preview Parity)
     # =========================================================================
     s7 = prs.slides.add_slide(blank)
@@ -1212,49 +1210,42 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     add_logo(s7)
     add_footer(s7)
 
-    # Dynamic rate & spread resolutions from overrides
-    ecb_val = ov.get("ecb_rate") or ov.get("ecb_refi_rate") or "2.25%"
-    itraxx_val = ov.get("itraxx_main") or ov.get("itraxx") or "58 bps"
-    fed_val = ov.get("fed_rate") or "4.00–4.25%"
-    green_spread_val = ov.get("eur_green_spread") or ov.get("green_spread") or ov.get("spread") or "77 bps"
-    greenium_val = ov.get("greenium_concession") or ov.get("greenium_bps") or "-5 bps"
-
-    # 4 Metric Cards with matching colors and dynamic overrides
+    # 4 Metric Cards with matching colors and database values
     if p_fam == "DCM_REFI":
         mkt_cards = [
             ("EUR Benchmark Spread", ov.get("spread", "Mid-Swap + 82 bps"), ING_DARK_SLATE),
-            ("10Y EUR Mid-Swap", ov.get("mid_swap_10y", "2.48%"), RGBColor(17, 24, 39)),
-            ("ECB Refi Rate", ecb_val, ING_ORANGE),
-            ("iTraxx Main", itraxx_val, SUCCESS_GREEN)
+            ("10Y EUR Mid-Swap", "2.48%", RGBColor(17, 24, 39)),
+            ("ECB Refi Rate", "2.25%", ING_ORANGE),
+            ("iTraxx Main", "58 bps", SUCCESS_GREEN)
         ]
-        b1 = f"• Central Bank Policy: ECB Refinancing Rate at {ecb_val}; Fed Funds Target at {fed_val}."
+        b1 = "• Market Liquidity: Robust primary orderbook depth with average Tier-1 corporate coverage at 3.4x."
         b2 = "• Execution Window: Current credit spread stability provides optimal issuance timing ahead of upcoming maturities."
     elif p_fam == "GREEN_ESG":
         mkt_cards = [
-            ("EUR Green Spread", green_spread_val, ING_DARK_SLATE),
-            ("Greenium Concession", greenium_val, RGBColor(17, 24, 39)),
-            ("ECB Refi Rate", ecb_val, ING_ORANGE),
-            ("iTraxx Main", itraxx_val, SUCCESS_GREEN)
+            ("EUR Green Spread", "77 bps", ING_DARK_SLATE),
+            ("Greenium Concession", "-5 bps", RGBColor(17, 24, 39)),
+            ("ECB Refi Rate", "2.25%", ING_ORANGE),
+            ("iTraxx Main", "58 bps", SUCCESS_GREEN)
         ]
-        b1 = f"• Central Bank Policy: ECB Refinancing Rate at {ecb_val}; Fed Funds Target at {fed_val}."
+        b1 = "• Central Bank Policy: ECB Refinancing Rate at 2.25%; Fed Funds Target at 4.00–4.25%."
         b2 = "• High ESG subscription ratios (3.8x book cover) provide attractive new-issue pricing compression."
     elif p_fam == "FX_HEDGE":
         mkt_cards = [
-            ("EUR/USD Spot", ov.get("eur_usd_spot") or ov.get("spot_fx", "1.0650"), ING_DARK_SLATE),
-            ("1Y Forward Points", ov.get("fx_fwd_pts") or ov.get("forward_points", "+185 pts"), RGBColor(17, 24, 39)),
-            ("Fed Funds Target", fed_val, ING_ORANGE),
-            ("ECB Deposit Rate", ov.get("ecb_deposit_rate", "2.00%"), SUCCESS_GREEN)
+            ("EUR/USD Spot", ov.get("eur_usd_spot", "1.0650"), ING_DARK_SLATE),
+            ("1Y Forward Points", ov.get("fx_fwd_pts", "+145 pts"), RGBColor(17, 24, 39)),
+            ("Fed Funds Target", "4.00–4.25%", ING_ORANGE),
+            ("ECB Deposit Rate", "2.00%", SUCCESS_GREEN)
         ]
-        b1 = f"• Central Bank Policy: Fed easing trajectory creates favorable forward points carry environment for USD receivables."
+        b1 = "• Central Bank Policy: Fed easing trajectory creates favorable forward points carry environment for USD receivables."
         b2 = "• Currency Volatility: Heightened transatlantic rate divergence makes systematic layered hedging cost-effective."
-    else:  # RATES_HEDGE
+    else:  # RATES_HEDGE & DCM_REFI
         mkt_cards = [
             ("5Y EUR Swap", ov.get("swap_5y", "2.62%"), ING_DARK_SLATE),
             ("10Y Bund", ov.get("bund_10y", "2.61%"), RGBColor(17, 24, 39)),
-            ("ECB Refi Rate", ecb_val, ING_ORANGE),
-            ("iTraxx Main", itraxx_val, SUCCESS_GREEN)
+            ("ECB Refi Rate", "2.25%", ING_ORANGE),
+            ("iTraxx Main", ov.get("itraxx_main", "58 bps"), SUCCESS_GREEN)
         ]
-        b1 = f"• Central Bank Policy: ECB Refinancing Rate at {ecb_val}; Fed Funds Target at {fed_val}."
+        b1 = "• Central Bank Policy: ECB Refinancing Rate at 2.25%; Fed Funds Target at 4.00–4.25%."
         b2 = "• Tightening European investment grade credit spreads support attractive execution windows."
 
     for idx, (lbl, val, val_color) in enumerate(mkt_cards):
@@ -1462,13 +1453,24 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
 
 
 
-        # SLIDE 9: EXECUTION ROADMAP
+    # SLIDE 9: EXECUTION ROADMAP (Exact Preview Parity)
+    # =========================================================================
     s9 = prs.slides.add_slide(blank)
-    add_header(s9, ov.get("roadmap_title") or sm.get("s9_ttl", "Execution Roadmap & Syndicate Timeline"), category=sm.get("s9_cat", "EXECUTION ROADMAP"))
+    
+    # Dynamic Title Resolution matching Preview Canvas
+    if p_fam == "FX_HEDGE":
+        s9_title = "Layered FX Hedging & Execution Roadmap"
+    elif p_fam == "GREEN_ESG":
+        s9_title = "Green Bond Framework & Issuance Timetable"
+    elif p_fam == "RATES_HEDGE":
+        s9_title = "ISDA Schedule, CSA & Execution Timeline"
+    else:
+        s9_title = "Indicative Execution Roadmap & Timeline"
+
+    add_header(s9, s9_title, category="EXECUTION ROADMAP")
     add_logo(s9)
     add_footer(s9)
 
-    custom_roadmap = ov.get("roadmap") or ov.get("roadmap_milestones")
     # Dynamic Steps matching React App.jsx case 8 exactly
     if p_fam == "FX_HEDGE":
         steps = [

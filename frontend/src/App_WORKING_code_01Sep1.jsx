@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
   ArrowUpRight, 
   ShieldAlert, 
@@ -136,20 +136,8 @@ class ErrorBoundary extends React.Component {
 // Main App Component
 // =============================================================================
 
-// Whitelisted Client IDs for UI presentation (Backend DB retains all clients)
-const ACTIVE_UI_CLIENT_IDS = ["CLI101"]; // Add "CLI102" tomorrow for ASML as ["CLI101", "CLI102"];
-
 export default function App() {
   const [opportunities, setOpportunities] = useState([]);
-
-  // Filter for UI display without altering underlying database records
-  const displayedOpportunities = useMemo(() => {
-    return opportunities.filter(o => 
-      ACTIVE_UI_CLIENT_IDS.includes(o.client_id) || 
-      ACTIVE_UI_CLIENT_IDS.includes(o.id) || 
-      (o.name && o.name.includes("Enel"))
-    );
-  }, [opportunities]);
   const [signals, setSignals] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [loadingClient, setLoadingClient] = useState(null);
@@ -493,7 +481,7 @@ export default function App() {
     if (!activeClient) return;
     const clientName = activeClient.name || activeClient.client_name || "Corporate Client";
     const remedies = remediesObj || complianceResult?.recommended_overrides || {
-      caveat: "MiFID II Art. 24(4) Notice: Indicative pricing and spreads are non-binding, subject to internal credit sanction, final allocation, and market conditions at execution.",
+      caveat: "Indicative terms for discussion purposes only. Subject to credit approvals, KYC/AML, and market conditions at pricing.",
       disclaimers: [
         "FOR PROFESSIONAL CLIENTS AND ELIGIBLE COUNTERPARTIES ONLY — No retail distribution under MiFID II Art. 24.",
         "Indicative terms and pricing are non-binding and subject to market volatility and final credit approval.",
@@ -1212,7 +1200,7 @@ const getProductFamily = (opp) => {
                   </table>
                 </div>
                 <p className="text-[8.5px] italic text-slate-500 mt-2">
-                  {deckOverrides?.caveat || deckOverrides?.term_sheet_caveat || "Indicative terms for discussion purposes only. Subject to internal credit approvals, KYC/AML, and market conditions at pricing."}
+                  Indicative terms for discussion purposes only. Subject to internal credit approvals, KYC/AML, and market conditions at pricing.
                 </p>
               </div>
               <div className="text-center text-[9px] text-gray-400 border-t border-gray-100 pt-1.5">ING Wholesale Banking • Strictly Confidential</div>
@@ -1395,10 +1383,10 @@ const getProductFamily = (opp) => {
               </button>
               <div className="text-right text-xs text-gray-500 leading-tight">
                 <span className="font-semibold text-gray-700">
-                  {new Date().toLocaleDateString("en-US", { timeZone: "Europe/Amsterdam", weekday: "short", day: "numeric", month: "short" })}
+                  {new Date().toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
                 <br />
-                {new Date().toLocaleTimeString("en-US", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" })} CET
+                {new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} CET
               </div>
               <div className="w-9 h-9 rounded-full bg-[#0C112B] text-white flex items-center justify-center font-bold text-xs tracking-wider">
                 SB
@@ -1477,7 +1465,7 @@ const getProductFamily = (opp) => {
                 Today's Cohort Matches
               </p>
               <h1 className="text-3xl font-serif font-bold text-[#0C112B] mb-2">
-                {displayedOpportunities.length} {displayedOpportunities.length === 1 ? 'opportunity surfaced' : 'opportunities surfaced'}
+                {opportunities.length} opportunities surfaced
               </h1>
               <p className="text-sm text-gray-600 leading-relaxed">
                 Each match combines live market rates curves and internal corporate debt schedules from database into pre-drafted pitchbooks.
@@ -1485,8 +1473,8 @@ const getProductFamily = (opp) => {
             </div>
 
             <div className="space-y-6">
-              {displayedOpportunities.length > 0 ? (
-                displayedOpportunities.map((opp) => {
+              {opportunities.length > 0 ? (
+                opportunities.map((opp) => {
                   const isDebt = opp.is_debt;
 
                   return (
@@ -1502,7 +1490,7 @@ const getProductFamily = (opp) => {
                               : "bg-emerald-50 text-emerald-800"
                           }`}
                         >
-                          OPPORTUNITY: {opp.type}
+                          {opp.type}
                         </span>
                         <div className="text-right">
                           <p className="text-[10px] text-gray-400 font-medium">Match confidence</p>
@@ -1521,7 +1509,7 @@ const getProductFamily = (opp) => {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-gray-200">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase">
-                                  Client Data
+                                  Segment 1: Client Data
                                 </span>
                                 <span className="text-[9px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.2 rounded">Static</span>
                               </div>
@@ -1555,7 +1543,7 @@ const getProductFamily = (opp) => {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-gray-200">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase">
-                                  Market Data
+                                  Segment 2: Market Data
                                 </span>
                                 <span className="text-[9px] bg-purple-100 text-purple-800 font-bold px-1.5 py-0.2 rounded">Market DB</span>
                               </div>
@@ -1589,7 +1577,7 @@ const getProductFamily = (opp) => {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-blue-100">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#000066] uppercase flex items-center gap-1">
-                                  <span>🧠</span> Context Fabric
+                                  <span>🧠</span> Segment 3: Context Fabric
                                 </span>
                                 <span className="text-[9px] bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.5 rounded border border-blue-200">Fabric AI</span>
                               </div>
@@ -1639,9 +1627,9 @@ const getProductFamily = (opp) => {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-orange-200/70">
                                 <span className="text-[10px] font-extrabold tracking-wider text-[#FF6200] uppercase flex items-center gap-1">
-                                  <span>⚡</span> Mandate
+                                  <span>⚡</span> Segment 4: Mandate
                                 </span>
-                                <span className="text-[9px] bg-[#FFF0E6] text-[#FF6200] font-extrabold px-1.5 py-0.5 rounded border border-orange-200">AI Synthesis</span>
+                                <span className="text-[9px] bg-[#FFF0E6] text-[#FF6200] font-extrabold px-1.5 py-0.5 rounded border border-orange-200">LLM Synthesis</span>
                               </div>
 
                               <div className="space-y-1.5 text-[10.5px]">
@@ -1723,8 +1711,8 @@ const getProductFamily = (opp) => {
               {metrics ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white border border-gray-200 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-gray-900">{displayedOpportunities.length || 1}</p>
-                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">▲ {displayedOpportunities.length || 1}</p>
+                    <p className="text-2xl font-bold text-gray-900">{metrics.active_drafts?.value || 0}</p>
+                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">{metrics.active_drafts?.change || "+12%"}</p>
                     <p className="text-xs text-gray-500 leading-tight">{metrics.active_drafts?.label || "Active drafts in progress"}</p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -1733,13 +1721,13 @@ const getProductFamily = (opp) => {
                     <p className="text-xs text-gray-500 leading-tight">{metrics.avg_time?.label || "Avg. time to first draft"}</p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-gray-900">{displayedOpportunities.length || 1}</p>
+                    <p className="text-2xl font-bold text-gray-900">{metrics.pending_review?.value || 11}</p>
                     <p className="text-[11px] font-semibold text-gray-400 mb-1">{metrics.pending_review?.change || "steady"}</p>
                     <p className="text-xs text-gray-500 leading-tight">{metrics.pending_review?.label || "Deals pending review"}</p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-gray-900">{displayedOpportunities.length || 1}</p>
-                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">▲ {displayedOpportunities.length || 1}</p>
+                    <p className="text-2xl font-bold text-gray-900">{metrics.cohort_matches?.value || 6}</p>
+                    <p className="text-[11px] font-semibold text-emerald-600 mb-1">{metrics.cohort_matches?.change || "+2 this week"}</p>
                     <p className="text-xs text-gray-500 leading-tight">{metrics.cohort_matches?.label || "Cohort matches this month"}</p>
                   </div>
                 </div>
@@ -1757,7 +1745,7 @@ const getProductFamily = (opp) => {
               </p>
               {metrics?.priorities && metrics.priorities.length > 0 ? (
                 <div className="space-y-3">
-                  {metrics.priorities.filter(item => ACTIVE_UI_CLIENT_IDS.includes(item.client_id) || ACTIVE_UI_CLIENT_IDS.includes(item.id) || (item.title && item.title.toLowerCase().includes("enel"))).map((item, idx) => (
+                  {metrics.priorities.map((item, idx) => (
                     <div 
                       key={idx} 
                       onClick={() => {

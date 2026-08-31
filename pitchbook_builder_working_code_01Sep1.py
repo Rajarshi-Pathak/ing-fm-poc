@@ -529,7 +529,7 @@ def build_pitchbook(ctx, opp, compliance_bullets=None, overrides=None):
     tenor_str = ov.get("tenor", "7 Years (T + 7Y)")
     spread_str = ov.get("spread", "Mid-Swap + 82 bps")
     notional_str = ov.get("notional_bond", "EUR 600,000,000")
-    spread_disc = ov.get("caveat") or ov.get("spread_disclaimer") or "*Indicative pricing subject to market conditions, bookbuilding depth, and credit approval.*"
+    spread_disc = ov.get("spread_disclaimer", "*Indicative pricing subject to market conditions, bookbuilding depth, and credit approval.*")
 
     # -------- Scenario Values (with overrides) --------
     scen_up = ov.get("rate_scenario_up", "4.55%")
